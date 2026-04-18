@@ -901,9 +901,50 @@ public String getCurrentPriceLimit(HttpServletRequest request) {
 }
 ```
 
-### 4.6 登录认证机制
+### 4.6 登录认证机制与权限控制的关系
 
-#### 4.6.1 登录过滤器
+登录认证是权限控制的**前置条件**，两者构成了完整的访问控制体系。本节分析登录认证机制如何与权限控制配合工作，以及当前实现存在的问题。
+
+#### 4.6.1 访问控制的两层模型
+
+系统采用"认证-授权"的两层访问控制模型：
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    访问控制流程                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  用户请求                                                         │
+│      ↓                                                           │
+│  ┌──────────────┐                                                │
+│  │  第一层：认证  │  解决"你是谁"的问题                            │
+│  │  (登录过滤器) │  - 验证用户是否已登录                           │
+│  │              │  - 验证Token是否有效                            │
+│  └──────────────┘                                                │
+│      ↓                                                           │
+│  ┌──────────────┐                                                │
+│  │  第二层：授权  │  解决"你能做什么"的问题                         │
+│  │  (权限校验)   │  - 菜单权限：是否能访问某个页面                   │
+│  │              │  - 按钮权限：是否能执行某个操作                   │
+│  │              │  - 数据权限：是否能操作某条数据                   │
+│  │              │  - 接口权限：是否能调用某个API ⚠️ 当前缺失        │
+│  └──────────────┘                                                │
+│      ↓                                                           │
+│  业务处理                                                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### 4.6.2 登录过滤器的权限控制作用
+
+登录过滤器是权限控制的第一道防线，负责验证用户身份。
+
+**与权限控制的关系：**
+- 未登录用户无法访问任何受保护资源
+- 登录成功后，系统才能获取用户ID，进而查询用户的角色和权限
+- 过滤器只验证"是否登录"，不验证"是否有权限"（这是关键缺陷）
+
+**核心代码分析：**
 
 位置：`LogCostFilter.java:36`
 
@@ -912,7 +953,6 @@ public String getCurrentPriceLimit(HttpServletRequest request) {
 public void doFilter(ServletRequest request, ServletResponse response,
                      FilterChain chain) throws IOException, ServletException {
     HttpServletRequest servletRequest = (HttpServletRequest) request;
-    HttpServletResponse servletResponse = (HttpServletResponse) response;
     String requestUrl = servletRequest.getRequestURI();
     
     // 路径遍历攻击防护
@@ -922,30 +962,55 @@ public void doFilter(ServletRequest request, ServletResponse response,
         return;
     }
     
-    // 检查是否已登录（从Redis获取session）
+    // 检查是否已登录（从Redis获取userId）
     Object userId = redisService.getObjectFromSessionByKey(servletRequest, "userId");
+    
+    // ⚠️ 关键问题：这里只验证了已登录，没有进行权限校验
+    // 只要userId存在就放行，不检查用户是否有权限访问当前接口
     if (userId != null) {
-        chain.doFilter(request, response);
+        chain.doFilter(request, response);  // 直接放行
         return;
     }
     
     // 白名单URL（无需登录）
     if (requestUrl.equals("/jshERP-boot/doc.html") || 
         requestUrl.equals("/jshERP-boot/user/login") ||
-        requestUrl.equals("/jshERP-boot/user/register") ||
-        // ... 其他白名单
-    ) {
+        requestUrl.equals("/jshERP-boot/user/register")) {
         chain.doFilter(request, response);
         return;
     }
     
-    // 返回登录状态
+    // 未登录返回loginOut
     servletResponse.setStatus(500);
     servletResponse.getWriter().write("loginOut");
 }
 ```
 
-#### 4.6.2 Token管理
+**权限控制缺陷分析：**
+
+| 期望的访问控制 | 实际的访问控制 | 安全风险 |
+|----------------|----------------|----------|
+| 验证登录状态 | ✅ 已实现 | - |
+| 验证菜单权限 | ❌ 未实现（前端实现） | 可通过直接访问URL绕过 |
+| 验证按钮权限 | ❌ 未实现（前端实现） | 可通过直接调用API绕过 |
+| 验证接口权限 | ❌ 未实现 | 越权访问风险 |
+
+**举例说明：**
+- 普通用户A没有"删除采购单"的按钮权限
+- 前端页面上不会显示"删除"按钮
+- 但用户A可以直接调用 `POST /depotHead/delete` 接口
+- 由于后端只验证登录状态，不验证接口权限，这个删除操作会成功执行
+
+#### 4.6.3 Token管理与用户身份识别
+
+Token是连接登录认证和权限控制的纽带，负责维护用户的登录状态和身份信息。
+
+**与权限控制的关系：**
+- Token是用户身份的唯一标识
+- 通过Token从Redis获取用户ID
+- 用户ID是查询角色和权限的基础
+
+**核心代码分析：**
 
 位置：`RedisService.java:51`
 
@@ -955,19 +1020,96 @@ public Object getObjectFromSessionByKey(HttpServletRequest request, String key) 
     if (request == null) {
         return null;
     }
-    // 从请求头获取Token
-    String token = request.getHeader(ACCESS_TOKEN);  // X-Access-Token
+    
+    // 从请求头获取Token（前端每次请求都要携带）
+    String token = request.getHeader(ACCESS_TOKEN);  // 请求头：X-Access-Token
+    
     if (token != null) {
-        // 从Redis获取用户信息
+        // 从Redis的Hash结构中获取用户信息
+        // Redis存储结构：token -> {userId: 1, username: "admin", ...}
         if (redisTemplate.opsForHash().hasKey(token, key)) {
             obj = redisTemplate.opsForHash().get(token, key);
-            // 刷新Token过期时间
+            
+            // 刷新Token过期时间（每次操作都延长有效期）
             redisTemplate.expire(token, BusinessConstants.MAX_SESSION_IN_SECONDS, TimeUnit.SECONDS);
         }
     }
     return obj;
 }
 ```
+
+#### 4.6.4 登录认证与权限控制的完整数据流
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│  阶段1：用户登录                                                      │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  1. 用户输入用户名密码，调用 POST /user/login                       │
+│                                                                    │
+│  2. UserController.login() 处理：                                   │
+│     - 验证用户名密码（MD5加密后比对）                                 │
+│     - 生成Token（UUID格式）                                          │
+│     - 将用户信息存储到Redis：                                         │
+│       Key: token                                                    │
+│       Value: {userId: 1, username: "admin", tenantId: 1, ...}    │
+│                                                                    │
+│  3. 返回Token给前端                                                  │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+                              ↓
+┌────────────────────────────────────────────────────────────────────┐
+│  阶段2：后续请求（以查询采购单为例）                                  │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  1. 前端请求 GET /depotHead/list，请求头携带：                      │
+│     X-Access-Token: <token>                                        │
+│                                                                    │
+│  2. 登录过滤器 LogCostFilter.doFilter() 处理：                      │
+│     - 从请求头获取Token                                             │
+│     - 调用 redisService.getObjectFromSessionByKey(request, "userId") │
+│     - 从Redis查询到 userId = 1                                      │
+│     - ⚠️ 问题：只检查 userId 是否存在，不检查用户是否有权限访问 /depotHead/list │
+│     - 直接放行到Controller                                           │
+│                                                                    │
+│  3. 权限查询（按需调用）：                                            │
+│     - 当前端需要显示菜单时，调用 /function/findMenuByPNumber        │
+│     - 根据 userId 查询用户角色 → 查询菜单权限                        │
+│     - 当前端需要显示按钮时，调用 /user/getUserBtnByCurrentUser      │
+│     - 根据 userId 查询用户角色 → 查询按钮权限                        │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+#### 4.6.5 权限控制改进建议
+
+当前系统的权限控制存在"前端控制、后端不控制"的严重问题。建议在登录过滤器之后增加**接口级权限校验器**：
+
+```
+改进后的访问控制流程：
+
+用户请求
+    ↓
+登录过滤器（验证Token，获取userId）
+    ↓
+✅ 新增：接口权限校验器
+    - 根据userId查询用户角色
+    - 根据角色查询菜单权限和按钮权限
+    - 验证当前请求的URL是否在用户的菜单权限列表中
+    - 验证当前请求的操作（add/edit/delete等）是否在按钮权限中
+    - 如果验证失败，返回403 Forbidden
+    ↓
+业务处理
+```
+
+**改进后的权限控制对比：**
+
+| 权限类型 | 当前实现状态 | 改进后 |
+|----------|--------------|--------|
+| 菜单权限 | 前端控制（动态路由） | 前端 + 后端双重控制 |
+| 按钮权限 | 前端控制（v-has指令） | 前端 + 后端双重控制 |
+| 接口权限 | ❌ 未实现 | ✅ 后端校验器实现 |
+| 数据权限 | 部分实现（仓库过滤） | 保持并增强 |
 
 ### 4.7 权限控制总结
 
