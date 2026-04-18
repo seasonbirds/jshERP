@@ -105,6 +105,16 @@ const findBySelectSup = (params)=>postAction("/supplier/findBySelect_sup",params
 const findBySelectCus = (params)=>postAction("/supplier/findBySelect_cus",params);
 const findBySelectRetail = (params)=>postAction("/supplier/findBySelect_retail",params);
 const findBySelectOrgan = (params)=>postAction("/supplier/findBySelect_organ",params);
+
+//供应商管理
+const getSupplierManageList = (params)=>getAction("/supplierManage/list",params);
+const getSupplierManageInfo = (params)=>getAction("/supplierManage/info",params);
+const addSupplierManage = (params)=>postAction("/supplierManage/add",params);
+const editSupplierManage = (params)=>putAction("/supplierManage/update",params);
+const deleteSupplierManage = (params)=>deleteAction("/supplierManage/delete",params);
+const deleteBatchSupplierManage = (params)=>deleteAction("/supplierManage/deleteBatch",params);
+const checkSupplierManageName = (params)=>getAction("/supplierManage/checkIsNameExist",params);
+const batchSetSupplierManageStatus = (params)=>postAction("/supplierManage/batchSetStatus",params);
 //单据相关
 const findBillDetailByNumber = (params)=>getAction("/depotHead/getDetailByNumber",params);
 const waitBillCount = (params)=>getAction("/depotHead/waitBillCount",params);
@@ -200,6 +210,14 @@ export {
   findBySelectCus,
   findBySelectRetail,
   findBySelectOrgan,
+  getSupplierManageList,
+  getSupplierManageInfo,
+  addSupplierManage,
+  editSupplierManage,
+  deleteSupplierManage,
+  deleteBatchSupplierManage,
+  checkSupplierManageName,
+  batchSetSupplierManageStatus,
   findBillDetailByNumber,
   waitBillCount,
   getNeedCount,
