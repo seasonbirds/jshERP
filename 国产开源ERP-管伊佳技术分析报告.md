@@ -411,6 +411,56 @@ jsh_account             # 账户表
 | 客户对账 | 客户应收账款对账明细 |
 | 供应商对账 | 供应商应付账款对账明细 |
 
+#### 3.2.5 财务数据结构
+
+**核心表结构：**
+
+```
+jsh_account_head        # 财务主表（收入/支出/收款/付款/转账）
+├── id                  # 主键
+├── type                # 类型（收入/支出/收款/付款/转账/预收/预付）
+├── organ_id            # 往来单位ID（客户/供应商）
+├── hands_person_id     # 经手人ID
+├── change_amount       # 变动金额
+├── discount_money      # 优惠金额
+├── total_price         # 合计金额
+├── account_id          # 账户ID
+├── bill_no             # 单据编号
+├── bill_time           # 单据日期
+├── status              # 状态（0未审核/1已审核）
+├── remark              # 备注
+└── ...
+
+jsh_account_item        # 财务子表明细
+├── id                  # 主键
+├── header_id           # 主表ID（关联jsh_account_head）
+├── account_id          # 账户ID
+├── in_out_item_id      # 收支项目ID
+├── bill_id             # 关联单据ID（用于核销，关联jsh_depot_head）
+├── need_debt           # 应收欠款
+├── finish_debt         # 已收欠款
+├── each_amount         # 单项金额
+├── remark              # 备注
+└── ...
+
+jsh_account             # 账户表
+├── id                  # 主键
+├── name                # 账户名称（如：现金、工商银行、支付宝等）
+├── serial_no           # 账号/卡号
+├── initial_amount      # 期初金额
+├── current_amount      # 当前余额
+├── is_default          # 是否默认账户
+├── remark              # 备注
+└── ...
+
+jsh_in_out_item         # 收支项目表
+├── id                  # 主键
+├── name                # 项目名称（如：办公费、差旅费、运费等）
+├── type                # 类型（收入/支出）
+├── remark              # 备注
+└── ...
+```
+
 ### 3.3 生产模块
 
 #### 3.3.1 当前实现状态
@@ -950,14 +1000,14 @@ public Object getObjectFromSessionByKey(HttpServletRequest request, String key) 
 
 | 安全问题类型 | 严重程度 | 是否存在 | 位置 |
 |--------------|----------|----------|------|
-| XSS跨站脚本攻击 | 中高 | ⚠️ 部分存在 | 前端+后端 |
-| CSRF跨站请求伪造 | 高 | ❌ 不存在防护 | 全站 |
-| 点击劫持 | 中 | ❌ 未防护 | 全站 |
-| 敏感信息泄露 | 高 | ⚠️ 存在风险 | 多处 |
-| 依赖不安全的第三方库 | 高 | ✅ 存在 | pom.xml/package.json |
-| SQL注入 | 中 | ⚠️ 部分风险 | 数据库操作 |
-| 认证机制弱点 | 中高 | ⚠️ 存在 | 登录机制 |
-| 授权机制弱点 | 高 | ⚠️ 存在 | API接口 |
+| XSS跨站脚本攻击 | 中高 | 是 | 前端+后端 |
+| CSRF跨站请求伪造 | 高 | 是 | 全站 |
+| 点击劫持 | 中 | 是 | 全站 |
+| 敏感信息泄露 | 高 | 是 | 多处 |
+| 依赖不安全的第三方库 | 高 | 是 | pom.xml/package.json |
+| SQL注入 | 中 | 是 | 数据库操作 |
+| 认证机制弱点 | 中高 | 是 | 登录机制 |
+| 授权机制弱点 | 高 | 是 | API接口 |
 
 ### 5.2 详细安全问题分析
 
