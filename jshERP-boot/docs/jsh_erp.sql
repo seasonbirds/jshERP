@@ -998,4 +998,50 @@ INSERT INTO `jsh_user_business` VALUES (67, 'UserRole', '131', '[17]', NULL, 63,
 INSERT INTO `jsh_user_business` VALUES (68, 'RoleFunctions', '16', '[210]', NULL, 63, '0');
 INSERT INTO `jsh_user_business` VALUES (69, 'RoleFunctions', '17', '[210][225][211][241][32][33][199][242][38][41][200][201][239][202][40][232][233][197][44][203][204][205][206][212]', '[{\"funId\":\"241\",\"btnStr\":\"1,2\"},{\"funId\":\"33\",\"btnStr\":\"1,2\"},{\"funId\":\"199\",\"btnStr\":\"1,2\"},{\"funId\":\"242\",\"btnStr\":\"1,2\"},{\"funId\":\"41\",\"btnStr\":\"1,2\"},{\"funId\":\"200\",\"btnStr\":\"1,2\"},{\"funId\":\"210\",\"btnStr\":\"1,2\"},{\"funId\":\"211\",\"btnStr\":\"1,2\"},{\"funId\":\"197\",\"btnStr\":\"1\"},{\"funId\":\"203\",\"btnStr\":\"1\"},{\"funId\":\"204\",\"btnStr\":\"1\"},{\"funId\":\"205\",\"btnStr\":\"1\"},{\"funId\":\"206\",\"btnStr\":\"1\"},{\"funId\":\"212\",\"btnStr\":\"1\"},{\"funId\":\"201\",\"btnStr\":\"1,2\"},{\"funId\":\"202\",\"btnStr\":\"1,2\"},{\"funId\":\"40\",\"btnStr\":\"1,2\"},{\"funId\":\"232\",\"btnStr\":\"1,2\"},{\"funId\":\"233\",\"btnStr\":\"1,2\"}]', 63, '0');
 
+-- ----------------------------
+-- Table structure for jsh_supplier_manage
+-- 供应商管理表，用于存储更详细的供应商资质信息
+-- 状态说明：0-待审核，1-已生效，2-已拒绝
+-- ----------------------------
+DROP TABLE IF EXISTS `jsh_supplier_manage`;
+CREATE TABLE `jsh_supplier_manage`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `supplier_name` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '供应商名称',
+  `credit_code` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '统一社会信用代码',
+  `register_address` varchar(200) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '注册地址',
+  `business_address` varchar(200) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '经营地址',
+  `legal_person` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '法人',
+  `contact_phone` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '联系电话',
+  `business_license` varchar(200) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '营业执照图片路径',
+  `registered_capital` decimal(24, 6) NULL DEFAULT NULL COMMENT '注册资本',
+  `qualification` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '资质信息',
+  `entry_time` datetime(0) NOT NULL COMMENT '入驻时间',
+  `status` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '0' COMMENT '状态，0-待审核，1-已生效，2-已拒绝',
+  `remark` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '备注',
+  `creator` bigint(0) NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+  `tenant_id` bigint(0) NULL DEFAULT NULL COMMENT '租户id',
+  `delete_flag` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '0' COMMENT '删除标记，0-未删除，1-删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_supplier_name`(`supplier_name`, `tenant_id`, `delete_flag`) USING BTREE,
+  INDEX `idx_credit_code`(`credit_code`) USING BTREE,
+  INDEX `idx_status`(`status`) USING BTREE,
+  INDEX `idx_entry_time`(`entry_time`) USING BTREE,
+  INDEX `idx_tenant_id`(`tenant_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '供应商管理表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of jsh_supplier_manage
+-- 示例数据（可选）
+-- ----------------------------
+
+-- ----------------------------
+-- Add menu records for supplier manage
+-- 供应商管理菜单配置，位置在采购管理(0502)之后
+-- 菜单编号0503，排序0335（在采购订单0330和采购入库0340之间）
+-- ----------------------------
+INSERT INTO `jsh_function` VALUES (270, '0503', '供应商管理', '0', '/supplierManage', '/layouts/TabLayout', b'0', '0335', b'1', '电脑版', NULL, 'team', '0');
+INSERT INTO `jsh_function` VALUES (271, '050301', '供应商管理', '0503', '/system/supplierManage', '/system/SupplierManageList', b'0', '0336', b'1', '电脑版', '1,2,3', 'profile', '0');
+
 SET FOREIGN_KEY_CHECKS = 1;
