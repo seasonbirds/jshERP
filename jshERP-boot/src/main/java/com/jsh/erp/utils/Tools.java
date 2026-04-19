@@ -11,6 +11,7 @@ import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -257,30 +258,28 @@ public class Tools {
         return beforeStr;
     }
 
+    private static final SecureRandom secureRandom = new SecureRandom();
+
     /**
      * 生成随机字符串，字母和数字混合
      *
      * @return 组合后的字符串 ^[0-9a-zA-Z]
      */
     public static String getRandomChar() {
-        //生成一个0、1、2的随机数字
-        int rand = (int) Math.round(Math.random() * 1);
+        int rand = secureRandom.nextInt(3);
         long itmp = 0;
         char ctmp = '\u0000';
         switch (rand) {
-            //生成大写字母 + 1000以内数字
             case 1:
-                itmp = Math.round(Math.random() * 25 + 65);
+                itmp = secureRandom.nextInt(26) + 65;
                 ctmp = (char) itmp;
-                return String.valueOf(ctmp) + (int) Math.random() * 1000;
-            //生成小写字母
+                return String.valueOf(ctmp) + secureRandom.nextInt(1000);
             case 2:
-                itmp = Math.round(Math.random() * 25 + 97);
+                itmp = secureRandom.nextInt(26) + 97;
                 ctmp = (char) itmp;
-                return String.valueOf(ctmp) + (int) Math.random() * 1000;
-            //生成数字
+                return String.valueOf(ctmp) + secureRandom.nextInt(1000);
             default:
-                itmp = Math.round(Math.random() * 1000);
+                itmp = secureRandom.nextInt(1000);
                 return itmp + "";
         }
     }
@@ -655,12 +654,11 @@ public class Tools {
      * @return
      */
     public static String getCharAndNum(int length) {
-        Random random = new Random();
         StringBuffer valSb = new StringBuffer();
         String charStr = "0123456789abcdefghijklmnopqrstuvwxyz";
         int charLength = charStr.length();
         for (int i = 0; i < length; i++) {
-            int index = random.nextInt(charLength);
+            int index = secureRandom.nextInt(charLength);
             valSb.append(charStr.charAt(index));
         }
         return valSb.toString();
