@@ -18,8 +18,8 @@ import com.jsh.erp.service.MaterialService;
 import com.jsh.erp.service.SystemConfigService;
 import com.jsh.erp.service.UserService;
 import com.jsh.erp.utils.*;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +41,7 @@ import static com.jsh.erp.utils.ResponseJsonUtil.returnStr;
  */
 @RestController
 @RequestMapping(value = "/depotHead")
-@Api(tags = {"单据管理"})
+@Tag(name = "单据管理")
 public class DepotHeadController extends BaseController {
     private Logger logger = LoggerFactory.getLogger(DepotHeadController.class);
 
@@ -61,7 +61,7 @@ public class DepotHeadController extends BaseController {
     private UserService userService;
 
     @GetMapping(value = "/info")
-    @ApiOperation(value = "根据id获取信息")
+    @Operation(summary = "根据id获取信息")
     public String getList(@RequestParam("id") Long id,
                           HttpServletRequest request) throws Exception {
         DepotHead depotHead = depotHeadService.getDepotHead(id);
@@ -75,7 +75,7 @@ public class DepotHeadController extends BaseController {
     }
 
     @GetMapping(value = "/list")
-    @ApiOperation(value = "获取信息列表")
+    @Operation(summary = "获取信息列表")
     public TableDataInfo getList(@RequestParam(value = Constants.SEARCH, required = false) String search,
                                  HttpServletRequest request)throws Exception {
         String type = StringUtil.getInfo(search, "type");
@@ -101,7 +101,7 @@ public class DepotHeadController extends BaseController {
     }
 
     @DeleteMapping(value = "/delete")
-    @ApiOperation(value = "删除")
+    @Operation(summary = "删除")
     public String deleteResource(@RequestParam("id") Long id, HttpServletRequest request)throws Exception {
         Map<String, Object> objectMap = new HashMap<>();
         int delete = depotHeadService.deleteDepotHead(id, request);
@@ -109,7 +109,7 @@ public class DepotHeadController extends BaseController {
     }
 
     @DeleteMapping(value = "/deleteBatch")
-    @ApiOperation(value = "批量删除")
+    @Operation(summary = "批量删除")
     public String batchDeleteResource(@RequestParam("ids") String ids, HttpServletRequest request)throws Exception {
         Map<String, Object> objectMap = new HashMap<>();
         int delete = depotHeadService.batchDeleteDepotHead(ids, request);
@@ -117,7 +117,7 @@ public class DepotHeadController extends BaseController {
     }
 
     @PostMapping(value = "/forceCloseBatch")
-    @ApiOperation(value = "强制结单")
+    @Operation(summary = "强制结单")
     public String forceCloseBatch(@RequestBody JSONObject jsonObject, HttpServletRequest request)throws Exception {
         Map<String, Object> objectMap = new HashMap<>();
         String ids = jsonObject.getString("ids");
@@ -130,7 +130,7 @@ public class DepotHeadController extends BaseController {
     }
 
     @PostMapping(value = "/forceClosePurchaseBatch")
-    @ApiOperation(value = "强制结单-以销定购")
+    @Operation(summary = "强制结单-以销定购")
     public String forceClosePurchaseBatch(@RequestBody JSONObject jsonObject, HttpServletRequest request)throws Exception {
         Map<String, Object> objectMap = new HashMap<>();
         String ids = jsonObject.getString("ids");
@@ -149,7 +149,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @PostMapping(value = "/batchSetStatus")
-    @ApiOperation(value = "批量设置状态-审核或者反审核")
+    @Operation(summary = "批量设置状态-审核或者反审核")
     public String batchSetStatus(@RequestBody JSONObject jsonObject,
                                  HttpServletRequest request) throws Exception{
         Map<String, Object> objectMap = new HashMap<>();
@@ -178,7 +178,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @GetMapping(value = "/findInOutDetail")
-    @ApiOperation(value = "入库出库明细接口")
+    @Operation(summary = "入库出库明细接口")
     public BaseResponseInfo findInOutDetail(@RequestParam("currentPage") Integer currentPage,
                                             @RequestParam("pageSize") Integer pageSize,
                                             @RequestParam(value = "organId", required = false) Integer oId,
@@ -263,7 +263,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @GetMapping(value = "/findInOutMaterialCount")
-    @ApiOperation(value = "入库出库汇总接口")
+    @Operation(summary = "入库出库汇总接口")
     public BaseResponseInfo findInOutMaterialCount(@RequestParam("currentPage") Integer currentPage,
                                                    @RequestParam("pageSize") Integer pageSize,
                                                    @RequestParam(value = "organId", required = false) Integer oId,
@@ -335,7 +335,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @GetMapping(value = "/findAllocationDetail")
-    @ApiOperation(value = "调拨明细统计")
+    @Operation(summary = "调拨明细统计")
     public BaseResponseInfo findallocationDetail(@RequestParam("currentPage") Integer currentPage,
                                                  @RequestParam("pageSize") Integer pageSize,
                                                  @RequestParam("number") String number,
@@ -421,7 +421,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @GetMapping(value = "/getStatementAccount")
-    @ApiOperation(value = "对账单接口")
+    @Operation(summary = "对账单接口")
     public BaseResponseInfo getStatementAccount(@RequestParam("currentPage") Integer currentPage,
                                                  @RequestParam("pageSize") Integer pageSize,
                                                  @RequestParam("beginTime") String beginTime,
@@ -502,7 +502,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @GetMapping(value = "/getNeedCount")
-    @ApiOperation(value = "获取待收款或付款的条数")
+    @Operation(summary = "获取待收款或付款的条数")
     public BaseResponseInfo getNeedCount(@RequestParam("type") String type, HttpServletRequest request)throws Exception {
         BaseResponseInfo res = new BaseResponseInfo();
         Map<String, Object> map = new HashMap<>();
@@ -532,7 +532,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @GetMapping(value = "/getDetailByNumber")
-    @ApiOperation(value = "根据编号查询单据信息")
+    @Operation(summary = "根据编号查询单据信息")
     public BaseResponseInfo getDetailByNumber(@RequestParam("number") String number,
                                          HttpServletRequest request)throws Exception {
         BaseResponseInfo res = new BaseResponseInfo();
@@ -559,7 +559,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @GetMapping(value = "/getBillListByLinkNumber")
-    @ApiOperation(value = "根据原单号查询关联的单据列表")
+    @Operation(summary = "根据原单号查询关联的单据列表")
     public BaseResponseInfo getBillListByLinkNumber(@RequestParam("number") String number,
                                               HttpServletRequest request)throws Exception {
         BaseResponseInfo res = new BaseResponseInfo();
@@ -584,7 +584,7 @@ public class DepotHeadController extends BaseController {
      * @throws Exception
      */
     @PostMapping(value = "/addDepotHeadAndDetail")
-    @ApiOperation(value = "新增单据主表及单据子表信息")
+    @Operation(summary = "新增单据主表及单据子表信息")
     public Object addDepotHeadAndDetail(@RequestBody DepotHeadVo4Body body, HttpServletRequest request) throws  Exception{
         JSONObject result = ExceptionConstants.standardSuccess();
         String beanJson = body.getInfo();
@@ -601,7 +601,7 @@ public class DepotHeadController extends BaseController {
      * @throws Exception
      */
     @PutMapping(value = "/updateDepotHeadAndDetail")
-    @ApiOperation(value = "更新单据主表及单据子表信息")
+    @Operation(summary = "更新单据主表及单据子表信息")
     public Object updateDepotHeadAndDetail(@RequestBody DepotHeadVo4Body body, HttpServletRequest request) throws Exception{
         JSONObject result = ExceptionConstants.standardSuccess();
         String beanJson = body.getInfo();
@@ -616,7 +616,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @GetMapping(value = "/getBuyAndSaleStatistics")
-    @ApiOperation(value = "统计今日采购额、昨日采购额、本月采购额、今年采购额|销售额|零售额")
+    @Operation(summary = "统计今日采购额、昨日采购额、本月采购额、今年采购额|销售额|零售额")
     public BaseResponseInfo getBuyAndSaleStatistics(HttpServletRequest request) {
         BaseResponseInfo res = new BaseResponseInfo();
         try {
@@ -648,7 +648,7 @@ public class DepotHeadController extends BaseController {
      * @return
      */
     @GetMapping(value = "/getCreatorByCurrentUser")
-    @ApiOperation(value = "根据当前用户获取操作员数组")
+    @Operation(summary = "根据当前用户获取操作员数组")
     public BaseResponseInfo getCreatorByCurrentUser(HttpServletRequest request) {
         BaseResponseInfo res = new BaseResponseInfo();
         try {
@@ -671,7 +671,7 @@ public class DepotHeadController extends BaseController {
      * @throws Exception
      */
     @GetMapping(value = "/debtList")
-    @ApiOperation(value = "查询存在欠款的单据")
+    @Operation(summary = "查询存在欠款的单据")
     public String debtList(@RequestParam(value = Constants.SEARCH, required = false) String search,
                            @RequestParam("currentPage") Integer currentPage,
                            @RequestParam("pageSize") Integer pageSize,
@@ -714,7 +714,7 @@ public class DepotHeadController extends BaseController {
      * @throws Exception
      */
     @GetMapping(value = "/debtExport")
-    @ApiOperation(value = "导出存在欠款的单据")
+    @Operation(summary = "导出存在欠款的单据")
     public void debtExport(@RequestParam(value = "organId", required = false) Long organId,
                            @RequestParam(value = "materialParam", required = false) String materialParam,
                            @RequestParam(value = "number", required = false) String number,
@@ -741,7 +741,7 @@ public class DepotHeadController extends BaseController {
      * @throws Exception
      */
     @GetMapping(value = "/waitBillList")
-    @ApiOperation(value = "查询等待入库或出库的单据")
+    @Operation(summary = "查询等待入库或出库的单据")
     public String waitBillList(@RequestParam(value = Constants.SEARCH, required = false) String search,
                            @RequestParam("currentPage") Integer currentPage,
                            @RequestParam("pageSize") Integer pageSize,
@@ -776,7 +776,7 @@ public class DepotHeadController extends BaseController {
      * @throws Exception
      */
     @GetMapping(value = "/waitBillCount")
-    @ApiOperation(value = "查询等待入库或出库的单据数量")
+    @Operation(summary = "查询等待入库或出库的单据数量")
     public String waitBillCount(@RequestParam(value = Constants.SEARCH, required = false) String search,
                                HttpServletRequest request)throws Exception {
         Map<String, Object> objectMap = new HashMap<>();
@@ -800,7 +800,7 @@ public class DepotHeadController extends BaseController {
      * @throws Exception
      */
     @PostMapping(value = "/batchAddDepotHeadAndDetail")
-    @ApiOperation(value = "批量新增入库或出库单据")
+    @Operation(summary = "批量新增入库或出库单据")
     public Object batchAddDepotHeadAndDetail(@RequestBody JSONObject jsonObject,
                                              HttpServletRequest request) throws  Exception{
         JSONObject result = ExceptionConstants.standardSuccess();
