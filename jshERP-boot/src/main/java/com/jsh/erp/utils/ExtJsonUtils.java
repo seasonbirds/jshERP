@@ -2,9 +2,6 @@ package com.jsh.erp.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.parser.ParserConfig;
-import com.alibaba.fastjson.parser.deserializer.ExtraProcessor;
-import com.alibaba.fastjson.parser.deserializer.FieldDeserializer;
 import com.alibaba.fastjson.serializer.*;
 
 import java.io.IOException;
@@ -18,12 +15,13 @@ import java.util.Set;
  * @author jishenghua qq752718920  2018-10-7 15:26:27
  */
 public class ExtJsonUtils {
-    private static class NPFloatCodec extends FloatCodec {
-        public void write(JSONSerializer serializer, Object object, Object fieldName, Type fieldType) throws IOException {
-            SerializeWriter out = serializer.getWriter();
+    private static class NPFloatCodec implements ObjectSerializer {
+        @Override
+        public void write(JSONSerializer serializer, Object object, Object fieldName, Type fieldType, int features) throws IOException {
+            SerializeWriter out = serializer.out;
 
             if (object == null) {
-                if (serializer.isEnabled(SerializerFeature.WriteNullNumberAsZero)) {
+                if (SerializerFeature.isEnabled(features, SerializerFeature.WriteNullNumberAsZero)) {
                     out.write('0');
                 } else {
                     out.writeNull();
@@ -41,19 +39,20 @@ public class ExtJsonUtils {
                 String floatText = Float.toString(floatValue);
                 out.write(floatText);
 
-                if (serializer.isEnabled(SerializerFeature.WriteClassName)) {
+                if (SerializerFeature.isEnabled(features, SerializerFeature.WriteClassName)) {
                     out.write('F');
                 }
             }
         }
     }
 
-    private static class NPDoubleSerializer extends DoubleSerializer {
-        public void write(JSONSerializer serializer, Object object, Object fieldName, Type fieldType) throws IOException {
-            SerializeWriter out = serializer.getWriter();
+    private static class NPDoubleSerializer implements ObjectSerializer {
+        @Override
+        public void write(JSONSerializer serializer, Object object, Object fieldName, Type fieldType, int features) throws IOException {
+            SerializeWriter out = serializer.out;
 
             if (object == null) {
-                if (!serializer.isEnabled(SerializerFeature.WriteNullNumberAsZero)) {
+                if (!SerializerFeature.isEnabled(features, SerializerFeature.WriteNullNumberAsZero)) {
                     out.writeNull();
                 } else {
                     out.write('0');
@@ -68,11 +67,10 @@ public class ExtJsonUtils {
             } else if (Double.isInfinite(doubleValue)) {
                 out.writeNull();
             } else {
-                String doubleText;
-                doubleText = Double.toString(doubleValue);
-                out.append(doubleText);
+                String doubleText = Double.toString(doubleValue);
+                out.write(doubleText);
 
-                if (serializer.isEnabled(SerializerFeature.WriteClassName)) {
+                if (SerializerFeature.isEnabled(features, SerializerFeature.WriteClassName)) {
                     out.write('D');
                 }
             }
@@ -103,13 +101,6 @@ public class ExtJsonUtils {
                 ignoredKey.put(object, new HashSet<String>());
             }
             ignoredKey.get(object).add(name);
-//            if (value instanceof Float || value instanceof Double) {
-//                if (!floatMap.containsKey(object)) {
-//                    floatMap.put(object, new HashMap<String, Object>());
-//                }
-//                floatMap.get(object).put(name, value);
-//                return false;
-//            }
             return true;
         }
 
