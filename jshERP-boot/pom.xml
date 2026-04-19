@@ -150,13 +150,13 @@
 		</dependency>
 		<dependency>
 			<groupId>com.gitee.starblues</groupId>
-			<artifactId>spring-brick-boot-starter</artifactId>
-			<version>3.3.0</version>
+			<artifactId>springboot-plugin-framework</artifactId>
+			<version>2.4.4</version>
 		</dependency>
 		<dependency>
 			<groupId>com.gitee.starblues</groupId>
-			<artifactId>spring-brick-extension-mybatis</artifactId>
-			<version>3.3.0</version>
+			<artifactId>springboot-plugin-framework-extension-mybatis</artifactId>
+			<version>2.4.4</version>
 		</dependency>
 		<dependency>
 			<groupId>org.pf4j</groupId>
