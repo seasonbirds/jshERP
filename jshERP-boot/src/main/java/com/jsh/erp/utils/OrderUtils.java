@@ -1,9 +1,36 @@
 package com.jsh.erp.utils;
 
+import java.util.regex.Pattern;
+
 /**
  * @author jishenghua qq752718920  2018-10-7 15:26:27
  */
 public class OrderUtils {
+
+    private static final Pattern COLUMN_NAME_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*$");
+    private static final Pattern TABLE_NAME_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*$");
+
+    private static boolean isValidColumnName(String column) {
+        if (StringUtil.isEmpty(column)) {
+            return false;
+        }
+        return COLUMN_NAME_PATTERN.matcher(column).matches();
+    }
+
+    private static boolean isValidTableName(String table) {
+        if (StringUtil.isEmpty(table)) {
+            return false;
+        }
+        return TABLE_NAME_PATTERN.matcher(table).matches();
+    }
+
+    private static boolean isValidOrderDirection(String direction) {
+        if (StringUtil.isEmpty(direction)) {
+            return false;
+        }
+        String upperDir = direction.trim().toUpperCase();
+        return "ASC".equals(upperDir) || "DESC".equals(upperDir);
+    }
 
     /**
      * 将指定字段排序
@@ -16,14 +43,16 @@ public class OrderUtils {
             String[] splits = orders.split(Constants.SPLIT);
             if (splits.length == 2) {
                 String column = ColumnPropertyUtil.propertyToColumn(splits[0]);
+                String direction = splits[1];
+                if (!isValidColumnName(column) || !isValidOrderDirection(direction)) {
+                    return "";
+                }
                 if (column.equals("audit_status")) {
-                    // TODO: 2015/12/24 这么处理不好，得相伴办法调整
-                    return "IF(`audit_status`=3,-1,`audit_status`) " + splits[1];
+                    return "IF(`audit_status`=3,-1,`audit_status`) " + direction.toUpperCase();
                 } else if (column.equals("create_time") || column.equals("modify_time")) {
-                    // TODO: 2015/12/24 这么处理不好，得相伴办法调整
-                    return column + " " + splits[1];
+                    return column + " " + direction.toUpperCase();
                 } else {
-                    return "convert(" + column + " using gbk) " + splits[1];
+                    return "convert(" + column + " using gbk) " + direction.toUpperCase();
                 }
             }
         }
@@ -34,7 +63,12 @@ public class OrderUtils {
         if (StringUtil.isNotEmpty(orders)) {
             String[] splits = orders.split(Constants.SPLIT);
             if (splits.length == 2) {
-                return "convert(" + tableName + "." + ColumnPropertyUtil.propertyToColumn(splits[0]) + " using gbk) " + splits[1];
+                String column = ColumnPropertyUtil.propertyToColumn(splits[0]);
+                String direction = splits[1];
+                if (!isValidColumnName(column) || !isValidOrderDirection(direction) || !isValidTableName(tableName)) {
+                    return "";
+                }
+                return "convert(" + tableName + "." + column + " using gbk) " + direction.toUpperCase();
             }
         }
         return "";
@@ -54,14 +88,18 @@ public class OrderUtils {
             String[] splits = orders.split(Constants.SPLIT);
             if (splits.length == 2) {
                 String column = ColumnPropertyUtil.propertyToColumn(splits[0]);
+                String direction = splits[1];
+                if (!isValidColumnName(column) || !isValidOrderDirection(direction)) {
+                    return "";
+                }
                 if (ipPropertyName != null && ipPropertyName.length > 0) {
                     for (String ip : ipPropertyName) {
                         if (ip.equals(column)) {
-                            return "inet_aton(" + column + ") " + splits[1];
+                            return "inet_aton(" + column + ") " + direction.toUpperCase();
                         }
                     }
                 }
-                return column + " " + splits[1];
+                return column + " " + direction.toUpperCase();
             }
         }
         return "";
