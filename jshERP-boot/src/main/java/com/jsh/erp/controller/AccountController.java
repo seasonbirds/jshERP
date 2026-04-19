@@ -34,7 +34,7 @@ import static com.jsh.erp.utils.ResponseJsonUtil.returnStr;
  */
 @RestController
 @RequestMapping(value = "/account")
-@Api(tags = {"账户管理"})
+@Tag(name = "账户管理")
 public class AccountController extends BaseController {
     private Logger logger = LoggerFactory.getLogger(AccountController.class);
 

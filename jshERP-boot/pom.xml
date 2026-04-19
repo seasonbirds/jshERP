@@ -49,14 +49,9 @@
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.alibaba.fastjson2</groupId>
-			<artifactId>fastjson2</artifactId>
-			<version>${fastjson2.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.alibaba.fastjson2</groupId>
-			<artifactId>fastjson2-extension-spring6</artifactId>
-			<version>${fastjson2.version}</version>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+			<version>2.0.61</version>
 		</dependency>
 		<dependency>
 			<groupId>com.mysql</groupId>
@@ -151,12 +146,12 @@
 		<dependency>
 			<groupId>com.gitee.starblues</groupId>
 			<artifactId>springboot-plugin-framework</artifactId>
-			<version>2.4.4</version>
+			<version>2.4.3-RELEASE</version>
 		</dependency>
 		<dependency>
 			<groupId>com.gitee.starblues</groupId>
 			<artifactId>springboot-plugin-framework-extension-mybatis</artifactId>
-			<version>2.4.4</version>
+			<version>2.4.3-RELEASE</version>
 		</dependency>
 		<dependency>
 			<groupId>org.pf4j</groupId>
@@ -228,8 +223,7 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.13.0</version>
 				<configuration>
-					<source>21</source>
-					<target>21</target>
+					<release>21</release>
 				</configuration>
 			</plugin>
 		</plugins>

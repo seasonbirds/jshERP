@@ -29,7 +29,7 @@ import static com.jsh.erp.utils.ResponseJsonUtil.returnStr;
  */
 @RestController
 @RequestMapping(value = "/inOutItem")
-@Api(tags = {"收支项目"})
+@Tag(name = "收支项目")
 public class InOutItemController extends BaseController {
     private Logger logger = LoggerFactory.getLogger(InOutItemController.class);
 
