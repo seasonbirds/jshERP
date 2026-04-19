@@ -9,8 +9,8 @@ import com.jsh.erp.service.UserService;
 import com.jsh.erp.utils.BaseResponseInfo;
 import com.jsh.erp.utils.ComputerInfo;
 import com.jsh.erp.utils.StringUtil;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,7 @@ import java.util.*;
  */
 @RestController
 @RequestMapping("/plugin")
-@Api(tags = {"插件管理"})
+@Tag(name = "插件管理")
 public class PluginController {
     private Logger logger = LoggerFactory.getLogger(PluginController.class);
 
@@ -49,7 +49,7 @@ public class PluginController {
      * @return 返回插件信息
      */
     @GetMapping(value = "/list")
-    @ApiOperation(value = "获取插件信息")
+    @Operation(summary = "获取插件信息")
     public BaseResponseInfo getPluginInfo(@RequestParam(value = "name",required = false) String name,
                                           @RequestParam("currentPage") Integer currentPage,
                                           @RequestParam("pageSize") Integer pageSize,
@@ -89,7 +89,7 @@ public class PluginController {
      * @return 获取插件文件名。只在生产环境显示
      */
     @GetMapping("/files")
-    @ApiOperation(value = "获取插件jar文件名")
+    @Operation(summary = "获取插件jar文件名")
     public Set<String> getPluginFilePaths(){
         try {
             User userInfo = userService.getCurrentUser();
@@ -111,7 +111,7 @@ public class PluginController {
      * @return 返回操作结果
      */
     @PostMapping("/stop/{id}")
-    @ApiOperation(value = "根据插件id停止插件")
+    @Operation(summary = "根据插件id停止插件")
     public BaseResponseInfo stop(@PathVariable("id") String id){
         BaseResponseInfo res = new BaseResponseInfo();
         Map<String, Object> map = new HashMap<String, Object>();
@@ -145,7 +145,7 @@ public class PluginController {
      * @return 返回操作结果
      */
     @PostMapping("/start/{id}")
-    @ApiOperation(value = "根据插件id启动插件")
+    @Operation(summary = "根据插件id启动插件")
     public BaseResponseInfo start(@PathVariable("id") String id){
         BaseResponseInfo res = new BaseResponseInfo();
         Map<String, Object> map = new HashMap<String, Object>();
@@ -180,7 +180,7 @@ public class PluginController {
      * @return 返回操作结果
      */
     @PostMapping("/uninstall/{id}")
-    @ApiOperation(value = "根据插件id卸载插件")
+    @Operation(summary = "根据插件id卸载插件")
     public BaseResponseInfo uninstall(@PathVariable("id") String id){
         BaseResponseInfo res = new BaseResponseInfo();
         Map<String, Object> map = new HashMap<String, Object>();
@@ -215,7 +215,7 @@ public class PluginController {
      * @return 操作结果
      */
     @PostMapping("/installByPath")
-    @ApiOperation(value = "根据插件路径安装插件")
+    @Operation(summary = "根据插件路径安装插件")
     public String install(@RequestParam("path") String path){
         try {
             User userInfo = userService.getCurrentUser();
@@ -241,7 +241,7 @@ public class PluginController {
      * @return 操作结果
      */
     @PostMapping("/uploadInstallPluginJar")
-    @ApiOperation(value = "上传并安装插件")
+    @Operation(summary = "上传并安装插件")
     public BaseResponseInfo install(MultipartFile file, HttpServletRequest request, HttpServletResponse response){
         BaseResponseInfo res = new BaseResponseInfo();
         try {
@@ -268,7 +268,7 @@ public class PluginController {
      * @return 操作结果
      */
     @PostMapping("/uploadPluginConfigFile")
-    @ApiOperation(value = "上传插件的配置文件")
+    @Operation(summary = "上传插件的配置文件")
     public String uploadConfig(@RequestParam("configFile") MultipartFile multipartFile){
         try {
             User userInfo = userService.getCurrentUser();
@@ -294,7 +294,7 @@ public class PluginController {
      * @return 操作结果
      */
     @PostMapping("/back/{pluginId}")
-    @ApiOperation(value = "备份插件")
+    @Operation(summary = "备份插件")
     public String backupPlugin(@PathVariable("pluginId") String pluginId){
         try {
             User userInfo = userService.getCurrentUser();
@@ -318,7 +318,7 @@ public class PluginController {
      * @return
      */
     @GetMapping("/getMacWithSecret")
-    @ApiOperation(value = "获取加密后的mac")
+    @Operation(summary = "获取加密后的mac")
     public BaseResponseInfo getMacWithSecret(){
         BaseResponseInfo res = new BaseResponseInfo();
         try {
@@ -339,7 +339,7 @@ public class PluginController {
      * @return
      */
     @GetMapping("/checkByPluginId")
-    @ApiOperation(value = "根据插件标识判断是否存在")
+    @Operation(summary = "根据插件标识判断是否存在")
     public BaseResponseInfo checkByTag(@RequestParam("pluginIds") String pluginIds){
         BaseResponseInfo res = new BaseResponseInfo();
         try {
