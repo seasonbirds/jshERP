@@ -7,6 +7,7 @@ import org.springframework.util.Assert;
 
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static com.jsh.erp.utils.Constants.CURRENT_PAGE;
 import static com.jsh.erp.utils.Constants.PAGE_SIZE;
@@ -15,6 +16,10 @@ import static com.jsh.erp.utils.Constants.PAGE_SIZE;
  * @author jishenghua qq752718920  2018-10-7 15:26:27
  */
 public class QueryUtils {
+    
+    private static final Pattern COLUMN_NAME_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*$");
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("^-?\\d+(\\.\\d+)?$");
+
     public static String filterSqlSpecialChar(String search) {
         return search != null ? search
                 .replaceAll("_", "\\\\_")
@@ -22,6 +27,23 @@ public class QueryUtils {
                 .replaceAll("\\[", "\\\\[")
                 .replaceAll("\\]", "\\\\]")
                 .replaceAll("\\^", "\\\\^") : null;
+    }
+
+    private static boolean isValidColumnName(String column) {
+        if (StringUtil.isEmpty(column)) {
+            return false;
+        }
+        return COLUMN_NAME_PATTERN.matcher(column).matches();
+    }
+
+    private static String escapeSqlValue(String value) {
+        if (value == null) {
+            return "NULL";
+        }
+        if (NUMBER_PATTERN.matcher(value).matches()) {
+            return value;
+        }
+        return "'" + value.replace("'", "''") + "'";
     }
 
     public static <T> T list2One(List<T> list, String label) {
@@ -105,13 +127,16 @@ public class QueryUtils {
                         JSONArray value = object.getJSONArray("value");
 
                         if (!value.isEmpty()) {
+                            String key = object.getString("name");
+                            if (!isValidColumnName(key)) {
+                                continue;
+                            }
+
                             if (!first) {
                                 builder.append(" AND ");
                             } else {
                                 first = false;
                             }
-
-                            String key = object.getString("name");
 
                             builder.append("(");
 
@@ -125,7 +150,8 @@ public class QueryUtils {
                                 if (vidx != 0) {
                                     builder.append(",");
                                 }
-                                builder.append(value.getString(vidx));
+                                String val = value.getString(vidx);
+                                builder.append(escapeSqlValue(val));
                             }
                             builder.append(")");
 
@@ -133,7 +159,7 @@ public class QueryUtils {
                         }
                     }
                 }
-                return builder.toString();
+                return builder.length() > 0 ? builder.toString() : null;
             }
         } else {
             return null;
