@@ -31,7 +31,7 @@ import static com.jsh.erp.utils.ResponseJsonUtil.returnStr;
  */
 @RestController
 @RequestMapping(value = "/role")
-@Api(tags = {"角色管理"})
+@Tag(name = "角色管理")
 public class RoleController extends BaseController {
     private Logger logger = LoggerFactory.getLogger(RoleController.class);
 

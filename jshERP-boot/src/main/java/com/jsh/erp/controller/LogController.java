@@ -29,7 +29,7 @@ import static com.jsh.erp.utils.ResponseJsonUtil.returnStr;
  */
 @RestController
 @RequestMapping(value = "/log")
-@Api(tags = {"日志管理"})
+@Tag(name = "日志管理")
 public class LogController extends BaseController {
     private Logger logger = LoggerFactory.getLogger(LogController.class);
 
