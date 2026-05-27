@@ -1,6 +1,9 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.*;
 import com.jsh.erp.datasource.mappers.FunctionMapper;
@@ -12,8 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -37,9 +38,6 @@ public class FunctionService {
 
     @Resource
     private SystemConfigService systemConfigService;
-
-    @Resource
-    private LogService logService;
 
     public Function getFunction(long id)throws Exception {
         Function result=null;
@@ -89,6 +87,7 @@ public class FunctionService {
         return list;
     }
 
+    @OperationLog(moduleName="功能", operationType=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertFunction(JSONObject obj, HttpServletRequest request)throws Exception {
         Function functions = JSONObject.parseObject(obj.toJSONString(), Function.class);
@@ -98,8 +97,7 @@ public class FunctionService {
                 functions.setState(false);
                 functions.setType("电脑版");
                 result = functionsMapper.insertSelective(functions);
-                logService.insertLog("功能",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(functions.getName()).toString(), request);
+                LogContentProvider.setContent("新增" + functions.getName());
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -107,6 +105,7 @@ public class FunctionService {
         return result;
     }
 
+    @OperationLog(moduleName="功能", operationType=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateFunction(JSONObject obj, HttpServletRequest request) throws Exception{
         Function functions = JSONObject.parseObject(obj.toJSONString(), Function.class);
@@ -114,8 +113,7 @@ public class FunctionService {
         try{
             if(BusinessConstants.DEFAULT_MANAGER.equals(userService.getCurrentUser().getLoginName())) {
                 result = functionsMapper.updateByPrimaryKeySelective(functions);
-                logService.insertLog("功能",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(functions.getName()).toString(), request);
+                LogContentProvider.setContent("修改" + functions.getName());
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -123,11 +121,13 @@ public class FunctionService {
         return result;
     }
 
+    @OperationLog(moduleName="功能", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteFunction(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteFunctionByIds(id.toString());
     }
 
+    @OperationLog(moduleName="功能", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteFunction(String ids, HttpServletRequest request)throws Exception {
         return batchDeleteFunctionByIds(ids);
@@ -147,8 +147,7 @@ public class FunctionService {
         try{
             if(BusinessConstants.DEFAULT_MANAGER.equals(userService.getCurrentUser().getLoginName())) {
                 result = functionMapperEx.batchDeleteFunctionByIds(new Date(), userInfo == null ? null : userInfo.getId(), idArray);
-                logService.insertLog("功能", sb.toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                LogContentProvider.setContent(sb.toString());
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);

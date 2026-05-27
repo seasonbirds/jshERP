@@ -2,6 +2,10 @@ package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.LogUserContext;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -76,8 +80,6 @@ public class DepotHeadService {
     private RedisService redisService;
     @Resource
     DepotItemMapperEx depotItemMapperEx;
-    @Resource
-    private LogService logService;
 
     public DepotHead getDepotHead(long id)throws Exception {
         DepotHead result=null;
@@ -362,6 +364,7 @@ public class DepotHeadService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="单据", operationType=OperationType.ADD)
     public int insertDepotHead(JSONObject obj, HttpServletRequest request)throws Exception {
         DepotHead depotHead = JSONObject.parseObject(obj.toJSONString(), DepotHead.class);
         depotHead.setCreateTime(new Timestamp(System.currentTimeMillis()));
@@ -369,7 +372,7 @@ public class DepotHeadService {
         int result=0;
         try{
             result=depotHeadMapper.insert(depotHead);
-            logService.insertLog("单据", BusinessConstants.LOG_OPERATION_TYPE_ADD, request);
+            LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_ADD);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -377,6 +380,7 @@ public class DepotHeadService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="单据", operationType=OperationType.EDIT)
     public int updateDepotHead(JSONObject obj, HttpServletRequest request) throws Exception{
         DepotHead depotHead = JSONObject.parseObject(obj.toJSONString(), DepotHead.class);
         DepotHead dh=null;
@@ -390,19 +394,20 @@ public class DepotHeadService {
         int result=0;
         try{
             result = depotHeadMapper.updateByPrimaryKey(depotHead);
-            logService.insertLog("单据",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(depotHead.getId()).toString(), request);
+            LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + depotHead.getId());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="单据", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteDepotHead(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteBillByIds(id.toString());
     }
 
+    @OperationLog(moduleName="单据", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteDepotHead(String ids, HttpServletRequest request)throws Exception {
         return batchDeleteBillByIds(ids);
@@ -544,8 +549,7 @@ public class DepotHeadService {
         }
         //逻辑删除文件
         systemConfigService.deleteFileByPathList(pathList);
-        logService.insertLog("单据", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(sb.toString());
         return 1;
     }
 
@@ -601,6 +605,7 @@ public class DepotHeadService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="单据", operationType=OperationType.EDIT)
     public int batchForceClose(String ids, HttpServletRequest request) throws Exception {
         int result = 0;
         StringBuilder billNoStr = new StringBuilder();
@@ -628,14 +633,14 @@ public class DepotHeadService {
             //记录日志
             String billNos = billNoStr.toString();
             if(StringUtil.isNotEmpty(billNos)) {
-                logService.insertLog("单据", "强制结单：" + billNos,
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                LogContentProvider.setContent("强制结单：" + billNos);
             }
         }
         return result;
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="单据", operationType=OperationType.EDIT)
     public int batchForceClosePurchase(String ids, HttpServletRequest request) throws Exception {
         int result = 0;
         StringBuilder billNoStr = new StringBuilder();
@@ -663,14 +668,14 @@ public class DepotHeadService {
             //记录日志
             String billNos = billNoStr.toString();
             if(StringUtil.isNotEmpty(billNos)) {
-                logService.insertLog("单据", "强制结单-以销定购：" + billNos,
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                LogContentProvider.setContent("强制结单-以销定购：" + billNos);
             }
         }
         return result;
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="单据", operationType=OperationType.EDIT)
     public int batchSetStatus(String status, String depotHeadIDs)throws Exception {
         int result = 0;
         List<Long> dhIds = new ArrayList<>();
@@ -722,9 +727,7 @@ public class DepotHeadService {
             //记录日志
             if(!noList.isEmpty() && ("0".equals(status) || "1".equals(status))) {
                 String statusStr = status.equals("1")?"[审核]":"[反审核]";
-                logService.insertLog("单据",
-                        new StringBuffer(statusStr).append(String.join(", ", noList)).toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                LogContentProvider.setContent(new StringBuffer(statusStr).append(String.join(", ", noList)).toString());
             }
         }
         return result;
@@ -1118,6 +1121,7 @@ public class DepotHeadService {
      * @throws Exception
      */
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="单据", operationType=OperationType.ADD)
     public void addDepotHeadAndDetail(String beanJson, String rows,
                                       HttpServletRequest request) throws Exception {
         /**处理单据主表数据*/
@@ -1210,9 +1214,7 @@ public class DepotHeadService {
             depotItemService.saveDetials(rows,headId, "add",request);
         }
         String statusStr = depotHead.getStatus().equals("1")?"[审核]":"";
-        logService.insertLog("单据",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(depotHead.getNumber()).append(statusStr).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_ADD + depotHead.getNumber() + statusStr);
     }
 
     /**
@@ -1223,6 +1225,7 @@ public class DepotHeadService {
      * @throws Exception
      */
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="单据", operationType=OperationType.EDIT)
     public void updateDepotHeadAndDetail(String beanJson, String rows,HttpServletRequest request)throws Exception {
         /**更新单据主表信息*/
         DepotHead depotHead = JSONObject.parseObject(beanJson, DepotHead.class);
@@ -1315,9 +1318,7 @@ public class DepotHeadService {
         /**入库和出库处理单据子表信息*/
         depotItemService.saveDetials(rows,depotHead.getId(), "update",request);
         String statusStr = depotHead.getStatus().equals("1")?"[审核]":"";
-        logService.insertLog("单据",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(depotHead.getNumber()).append(statusStr).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + depotHead.getNumber() + statusStr);
     }
 
     /**
@@ -1771,6 +1772,7 @@ public class DepotHeadService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="单据", operationType=OperationType.BATCH_ADD)
     public void batchAddDepotHeadAndDetail(String ids, HttpServletRequest request) throws Exception {
         List<DepotHead> dhList = getDepotHeadListByIds(ids);
         StringBuilder sb = new StringBuilder();
@@ -1844,8 +1846,6 @@ public class DepotHeadService {
                 depotItemService.saveDetials(rows, headId, "add", request);
             }
         }
-        logService.insertLog("单据",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_BATCH_ADD).append(sb).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_BATCH_ADD + sb);
     }
 }

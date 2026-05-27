@@ -1,6 +1,9 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.AccountHead;
@@ -19,8 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -40,8 +41,6 @@ public class PersonService {
     private PersonMapperEx personMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
     @Resource
     private AccountHeadMapperEx accountHeadMapperEx;
     @Resource
@@ -93,6 +92,7 @@ public class PersonService {
         return list;
     }
 
+    @OperationLog(moduleName="经手人", operationType=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertPerson(JSONObject obj, HttpServletRequest request)throws Exception {
         Person person = JSONObject.parseObject(obj.toJSONString(), Person.class);
@@ -100,33 +100,34 @@ public class PersonService {
         try{
             person.setEnabled(true);
             result=personMapper.insertSelective(person);
-            logService.insertLog("经手人",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(person.getName()).toString(), request);
+            LogContentProvider.setContent("新增" + person.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="经手人", operationType=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updatePerson(JSONObject obj, HttpServletRequest request)throws Exception {
         Person person = JSONObject.parseObject(obj.toJSONString(), Person.class);
         int result=0;
         try{
             result=personMapper.updateByPrimaryKeySelective(person);
-            logService.insertLog("经手人",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(person.getName()).toString(), request);
+            LogContentProvider.setContent("修改" + person.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="经手人", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deletePerson(Long id, HttpServletRequest request)throws Exception {
         return batchDeletePersonByIds(id.toString());
     }
 
+    @OperationLog(moduleName="经手人", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeletePerson(String ids, HttpServletRequest request) throws Exception{
         return batchDeletePersonByIds(ids);
@@ -169,8 +170,7 @@ public class PersonService {
         for(Person person: list){
             sb.append("[").append(person.getName()).append("]");
         }
-        logService.insertLog("经手人", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(sb.toString());
         //删除经手人
         try{
             result=personMapperEx.batchDeletePersonByIds(idArray);
@@ -224,11 +224,9 @@ public class PersonService {
         return list;
     }
 
+    @OperationLog(moduleName="经手人", operationType=OperationType.ENABLED)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("经手人",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> personIds = StringUtil.strToLongList(ids);
         Person person = new Person();
         person.setEnabled(status);

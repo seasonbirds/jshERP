@@ -1,6 +1,9 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.Tenant;
 import com.jsh.erp.datasource.entities.TenantEx;
@@ -44,9 +47,6 @@ public class TenantService {
 
     @Resource
     private UserService userService;
-
-    @Resource
-    private LogService logService;
 
     @Value("${manage.roleId}")
     private Integer manageRoleId;
@@ -130,12 +130,14 @@ public class TenantService {
         return result;
     }
 
+    @OperationLog(moduleName="租户", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteTenant(Long id, HttpServletRequest request)throws Exception {
         int result=0;
         try{
             if(BusinessConstants.DEFAULT_MANAGER.equals(userService.getCurrentUser().getLoginName())) {
                 result = tenantMapper.deleteByPrimaryKey(id);
+                LogContentProvider.setContent("删除" + id);
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -143,6 +145,7 @@ public class TenantService {
         return result;
     }
 
+    @OperationLog(moduleName="租户", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteTenant(String ids, HttpServletRequest request)throws Exception {
         List<Long> idList = StringUtil.strToLongList(ids);
@@ -152,6 +155,7 @@ public class TenantService {
         try{
             if(BusinessConstants.DEFAULT_MANAGER.equals(userService.getCurrentUser().getLoginName())) {
                 result = tenantMapper.deleteByExample(example);
+                LogContentProvider.setContent("删除" + ids);
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -182,6 +186,7 @@ public class TenantService {
         return tenant;
     }
 
+    @OperationLog(moduleName="租户", operationType=OperationType.EDIT)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
         int result=0;
         try{
@@ -192,9 +197,7 @@ public class TenantService {
                 } else {
                     statusStr = "批量禁用";
                 }
-                logService.insertLog("用户",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(ids).append("-").append(statusStr).toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + ids + "-" + statusStr);
                 List<Long> idList = StringUtil.strToLongList(ids);
                 Tenant tenant = new Tenant();
                 tenant.setEnabled(status);

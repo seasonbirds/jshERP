@@ -1,6 +1,9 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -16,8 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
@@ -36,8 +37,6 @@ public class SupplierService {
 
     @Resource
     private SupplierMapperEx supplierMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
     @Resource
@@ -144,6 +143,7 @@ public class SupplierService {
         return list;
     }
 
+    @OperationLog(moduleName="商家", operationType=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertSupplier(JSONObject obj, HttpServletRequest request)throws Exception {
         Supplier supplier = JSONObject.parseObject(obj.toJSONString(), Supplier.class);
@@ -155,14 +155,14 @@ public class SupplierService {
             result=supplierMapper.insertSelective(supplier);
             //新增客户时给当前用户和租户自动授权
             setUserCustomerPermission(request, supplier);
-            logService.insertLog("商家",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(supplier.getSupplier()).toString(),request);
+            LogContentProvider.setContent("新增" + supplier.getSupplier());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="商家", operationType=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateSupplier(JSONObject obj, HttpServletRequest request)throws Exception {
         Supplier supplier = JSONObject.parseObject(obj.toJSONString(), Supplier.class);
@@ -175,19 +175,20 @@ public class SupplierService {
         int result=0;
         try{
             result=supplierMapper.updateByPrimaryKeySelective(supplier);
-            logService.insertLog("商家",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(supplier.getSupplier()).toString(), request);
+            LogContentProvider.setContent("修改" + supplier.getSupplier());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="商家", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteSupplier(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteSupplierByIds(id.toString());
     }
 
+    @OperationLog(moduleName="商家", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteSupplier(String ids, HttpServletRequest request) throws Exception{
         return batchDeleteSupplierByIds(ids);
@@ -230,8 +231,7 @@ public class SupplierService {
         for(Supplier supplier: list){
             sb.append("[").append(supplier.getSupplier()).append("]");
         }
-        logService.insertLog("商家", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(sb.toString());
         User userInfo=userService.getCurrentUser();
         //校验通过执行删除操作
         try{
@@ -364,11 +364,9 @@ public class SupplierService {
         return list;
     }
 
+    @OperationLog(moduleName="商家", operationType=OperationType.ENABLED)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("商家",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> supplierIds = StringUtil.strToLongList(ids);
         Supplier supplier = new Supplier();
         supplier.setEnabled(status);
@@ -547,11 +545,10 @@ public class SupplierService {
         importExcel(sList, type, request);
     }
 
+    @OperationLog(moduleName="商家", operationType=OperationType.IMPORT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public BaseResponseInfo importExcel(List<Supplier> mList, String type, HttpServletRequest request) throws Exception {
-        logService.insertLog(type,
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_IMPORT).append(mList.size()).append(BusinessConstants.LOG_DATA_UNIT).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_IMPORT + mList.size() + BusinessConstants.LOG_DATA_UNIT);
         BaseResponseInfo info = new BaseResponseInfo();
         Map<String, Object> data = new HashMap<>();
         try {

@@ -2,6 +2,9 @@ package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -47,8 +50,6 @@ public class AccountHeadService {
     private SupplierService supplierService;
     @Resource
     private SystemConfigService systemConfigService;
-    @Resource
-    private LogService logService;
     @Resource
     private AccountItemMapperEx accountItemMapperEx;
     @Resource
@@ -152,6 +153,7 @@ public class AccountHeadService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="财务单据", operationType=OperationType.ADD)
     public int insertAccountHead(JSONObject obj, HttpServletRequest request) throws Exception{
         AccountHead accountHead = JSONObject.parseObject(obj.toJSONString(), AccountHead.class);
         int result=0;
@@ -159,8 +161,7 @@ public class AccountHeadService {
             User userInfo=userService.getCurrentUser();
             accountHead.setCreator(userInfo==null?null:userInfo.getId());
             result = accountHeadMapper.insertSelective(accountHead);
-            logService.insertLog("财务单据",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(accountHead.getBillNo()).toString(), request);
+            LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_ADD + accountHead.getBillNo());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -168,24 +169,26 @@ public class AccountHeadService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="财务单据", operationType=OperationType.EDIT)
     public int updateAccountHead(JSONObject obj, HttpServletRequest request)throws Exception {
         AccountHead accountHead = JSONObject.parseObject(obj.toJSONString(), AccountHead.class);
         int result=0;
         try{
             result = accountHeadMapper.updateByPrimaryKeySelective(accountHead);
-            logService.insertLog("财务单据",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(accountHead.getBillNo()).toString(), request);
+            LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + accountHead.getBillNo());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="财务单据", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteAccountHead(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteAccountHeadByIds(id.toString());
     }
 
+    @OperationLog(moduleName="财务单据", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteAccountHead(String ids, HttpServletRequest request)throws Exception {
         return batchDeleteAccountHeadByIds(ids);
@@ -224,8 +227,7 @@ public class AccountHeadService {
         }
         //逻辑删除文件
         systemConfigService.deleteFileByPathList(pathList);
-        logService.insertLog("财务单据", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(sb.toString());
         return 1;
     }
 
@@ -249,6 +251,7 @@ public class AccountHeadService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="财务单据", operationType=OperationType.EDIT)
     public int batchSetStatus(String status, String accountHeadIds)throws Exception {
         int result = 0;
         List<Long> ahIds = new ArrayList<>();
@@ -285,9 +288,7 @@ public class AccountHeadService {
             //记录日志
             if(!noList.isEmpty() && ("0".equals(status) || "1".equals(status))) {
                 String statusStr = status.equals("1")?"[审核]":"[反审核]";
-                logService.insertLog("财务单据",
-                        new StringBuffer(statusStr).append(String.join(", ", noList)).toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                LogContentProvider.setContent(statusStr + String.join(", ", noList));
             }
         } else {
             result = 1;
@@ -296,6 +297,7 @@ public class AccountHeadService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="财务单据", operationType=OperationType.ADD)
     public void addAccountHeadAndDetail(String beanJson, String rows, HttpServletRequest request) throws Exception {
         AccountHead accountHead = JSONObject.parseObject(beanJson, AccountHead.class);
         //校验单号是否重复
@@ -341,11 +343,11 @@ public class AccountHeadService {
             supplierService.updateAdvanceIn(accountHead.getOrganId());
         }
         String statusStr = accountHead.getStatus().equals("1")?"[审核]":"";
-        logService.insertLog("财务单据",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(accountHead.getBillNo()).append(statusStr).toString(), request);
+        LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_ADD + accountHead.getBillNo() + statusStr);
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="财务单据", operationType=OperationType.EDIT)
     public void updateAccountHeadAndDetail(String beanJson, String rows, HttpServletRequest request) throws Exception {
         AccountHead accountHead = JSONObject.parseObject(beanJson, AccountHead.class);
         //校验单号是否重复
@@ -369,8 +371,7 @@ public class AccountHeadService {
             supplierService.updateAdvanceIn(accountHead.getOrganId());
         }
         String statusStr = accountHead.getStatus().equals("1")?"[审核]":"";
-        logService.insertLog("财务单据",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(accountHead.getBillNo()).append(statusStr).toString(), request);
+        LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + accountHead.getBillNo() + statusStr);
     }
 
     public List<AccountHeadVo4ListEx> getDetailByNumber(String billNo)throws Exception {
