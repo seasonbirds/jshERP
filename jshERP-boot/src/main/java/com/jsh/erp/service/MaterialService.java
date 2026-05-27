@@ -3,6 +3,8 @@ package com.jsh.erp.service;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.AuditLog;
+import com.jsh.erp.aop.AuditLogContext;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -19,8 +21,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
@@ -45,8 +45,6 @@ public class MaterialService {
     private MaterialCategoryMapperEx materialCategoryMapperEx;
     @Resource
     private MaterialExtendMapperEx materialExtendMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
     @Resource
@@ -152,6 +150,7 @@ public class MaterialService {
         return list;
     }
 
+    @AuditLog(moduleName = "商品", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertMaterial(JSONObject obj, HttpServletRequest request)throws Exception {
         Material m = JSONObject.parseObject(obj.toJSONString(), Material.class);
@@ -184,8 +183,7 @@ public class MaterialService {
                     }
                 }
             }
-            logService.insertLog("商品",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(m.getName()).toString(), request);
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_ADD + m.getName());
             return 1;
         }
         catch (BusinessRunTimeException ex) {
@@ -197,6 +195,7 @@ public class MaterialService {
         }
     }
 
+    @AuditLog(moduleName = "商品", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateMaterial(JSONObject obj, HttpServletRequest request) throws Exception{
         Material material = JSONObject.parseObject(obj.toJSONString(), Material.class);
@@ -239,8 +238,7 @@ public class MaterialService {
                     }
                 }
             }
-            logService.insertLog("商品",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(material.getName()).toString(), request);
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + material.getName());
             return 1;
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -248,11 +246,13 @@ public class MaterialService {
         }
     }
 
+    @AuditLog(moduleName = "商品", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteMaterial(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteMaterialByIds(id.toString());
     }
 
+    @AuditLog(moduleName = "商品", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteMaterial(String ids, HttpServletRequest request)throws Exception {
         return batchDeleteMaterialByIds(ids);
@@ -286,8 +286,7 @@ public class MaterialService {
                 pathList.add(material.getImgName());
             }
         }
-        logService.insertLog("商品", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        AuditLogContext.setContent(sb.toString());
         User userInfo=userService.getCurrentUser();
         //校验通过执行删除操作
         try{
@@ -322,11 +321,10 @@ public class MaterialService {
                 otherField2, otherField3, unit, unitId);
     }
 
+    @AuditLog(moduleName = "商品", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("商品",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(ids).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + ids);
         List<Long> materialIds = StringUtil.strToLongList(ids);
         Material material = new Material();
         material.setEnabled(status);
@@ -562,6 +560,7 @@ public class MaterialService {
         ExcelUtils.downloadExcel(file, file.getName(), response);
     }
 
+    @AuditLog(moduleName = "商品", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public BaseResponseInfo importExcel(MultipartFile file, HttpServletRequest request) throws Exception {
         BaseResponseInfo info = new BaseResponseInfo();
@@ -842,9 +841,7 @@ public class MaterialService {
                 batchDeleteCurrentStockByMaterialList(deleteCurrentStockMaterialIdList);
                 materialCurrentStockMapperEx.batchInsert(insertCurrentStockMaterialList);
             }
-            logService.insertLog("商品",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_IMPORT).append(mList.size()).append(BusinessConstants.LOG_DATA_UNIT).toString(),
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_IMPORT + mList.size() + BusinessConstants.LOG_DATA_UNIT);
             Long endTime = System.currentTimeMillis();
             logger.info("导入耗时：{}", endTime-beginTime);
             info.code = 200;

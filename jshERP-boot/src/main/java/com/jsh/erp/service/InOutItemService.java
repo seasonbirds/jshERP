@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.AuditLog;
+import com.jsh.erp.aop.AuditLogContext;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.AccountItem;
@@ -18,8 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -38,8 +38,6 @@ public class InOutItemService {
     private InOutItemMapperEx inOutItemMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
     @Resource
     private AccountItemMapperEx accountItemMapperEx;
 
@@ -89,6 +87,7 @@ public class InOutItemService {
         return list;
     }
 
+    @AuditLog(moduleName="收支项目", operationType="")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertInOutItem(JSONObject obj, HttpServletRequest request)throws Exception {
         InOutItem inOutItem = JSONObject.parseObject(obj.toJSONString(), InOutItem.class);
@@ -102,14 +101,14 @@ public class InOutItemService {
         try{
             inOutItem.setEnabled(true);
             result=inOutItemMapper.insertSelective(inOutItem);
-            logService.insertLog("收支项目",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(inOutItem.getName()).toString(), request);
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_ADD + inOutItem.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(moduleName="收支项目", operationType="")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateInOutItem(JSONObject obj, HttpServletRequest request)throws Exception {
         InOutItem inOutItem = JSONObject.parseObject(obj.toJSONString(), InOutItem.class);
@@ -122,19 +121,20 @@ public class InOutItemService {
         int result=0;
         try{
             result=inOutItemMapper.updateByPrimaryKeySelective(inOutItem);
-            logService.insertLog("收支项目",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(inOutItem.getName()).toString(), request);
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + inOutItem.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(moduleName="收支项目", operationType="")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteInOutItem(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteInOutItemByIds(id.toString());
     }
 
+    @AuditLog(moduleName="收支项目", operationType="")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteInOutItem(String ids, HttpServletRequest request)throws Exception {
         return batchDeleteInOutItemByIds(ids);
@@ -164,8 +164,7 @@ public class InOutItemService {
         for(InOutItem inOutItem: list){
             sb.append("[").append(inOutItem.getName()).append("]");
         }
-        logService.insertLog("收支项目", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        AuditLogContext.setContent(sb.toString());
         User userInfo=userService.getCurrentUser();
         try{
             result=inOutItemMapperEx.batchDeleteInOutItemByIds(new Date(),userInfo==null?null:userInfo.getId(),idArray);
@@ -224,11 +223,9 @@ public class InOutItemService {
         return list;
     }
 
+    @AuditLog(moduleName="收支项目", operationType="更新状态")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("收支项目",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> inOutItemIds = StringUtil.strToLongList(ids);
         InOutItem inOutItem = new InOutItem();
         inOutItem.setEnabled(status);
