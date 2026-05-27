@@ -10,6 +10,8 @@ import com.jsh.erp.datasource.mappers.TenantMapper;
 import com.jsh.erp.datasource.mappers.TenantMapperEx;
 import com.jsh.erp.datasource.mappers.UserBusinessMapperEx;
 import com.jsh.erp.datasource.mappers.UserMapperEx;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.exception.JshException;
 import com.jsh.erp.utils.PageUtils;
 import com.jsh.erp.utils.StringUtil;
@@ -44,9 +46,6 @@ public class TenantService {
 
     @Resource
     private UserService userService;
-
-    @Resource
-    private LogService logService;
 
     @Value("${manage.roleId}")
     private Integer manageRoleId;
@@ -182,19 +181,11 @@ public class TenantService {
         return tenant;
     }
 
+    @BusinessLog(moduleName = "用户", type = LogType.EDIT, contentTemplate = "{ids}")
     public int batchSetStatus(Boolean status, String ids)throws Exception {
         int result=0;
         try{
             if(BusinessConstants.DEFAULT_MANAGER.equals(userService.getCurrentUser().getLoginName())) {
-                String statusStr = "";
-                if (status) {
-                    statusStr = "批量启用";
-                } else {
-                    statusStr = "批量禁用";
-                }
-                logService.insertLog("用户",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(ids).append("-").append(statusStr).toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
                 List<Long> idList = StringUtil.strToLongList(ids);
                 Tenant tenant = new Tenant();
                 tenant.setEnabled(status);

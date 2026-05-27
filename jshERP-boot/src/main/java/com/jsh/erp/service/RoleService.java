@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.Role;
 import com.jsh.erp.datasource.entities.RoleEx;
@@ -33,8 +35,6 @@ public class RoleService {
 
     @Resource
     private RoleMapperEx roleMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
 
@@ -118,14 +118,13 @@ public class RoleService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "角色", type = LogType.ADD, contentTemplate = "{obj.name}")
     public int insertRole(JSONObject obj, HttpServletRequest request)throws Exception {
         Role role = JSONObject.parseObject(obj.toJSONString(), Role.class);
         int result=0;
         try{
             role.setEnabled(true);
             result=roleMapper.insertSelective(role);
-            logService.insertLog("角色",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(role.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -133,13 +132,12 @@ public class RoleService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "角色", type = LogType.EDIT, contentTemplate = "{obj.name}")
     public int updateRole(JSONObject obj, HttpServletRequest request) throws Exception{
         Role role = JSONObject.parseObject(obj.toJSONString(), Role.class);
         int result=0;
         try{
             result=roleMapper.updateByPrimaryKeySelective(role);
-            logService.insertLog("角色",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(role.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -188,15 +186,8 @@ public class RoleService {
      * @return int
      */
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "角色", type = LogType.DELETE, contentTemplate = "{entityNames}")
     public int batchDeleteRoleByIds(String ids) throws Exception{
-        StringBuffer sb = new StringBuffer();
-        sb.append(BusinessConstants.LOG_OPERATION_TYPE_DELETE);
-        List<Role> list = getRoleListByIds(ids);
-        for(Role role: list){
-            sb.append("[").append(role.getName()).append("]");
-        }
-        logService.insertLog("角色", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         User userInfo=userService.getCurrentUser();
         String [] idArray=ids.split(",");
         int result=0;
@@ -213,10 +204,8 @@ public class RoleService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "角色", type = LogType.ENABLED)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("角色",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> roleIds = StringUtil.strToLongList(ids);
         Role role = new Role();
         role.setEnabled(status);

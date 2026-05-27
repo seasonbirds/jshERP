@@ -8,6 +8,8 @@ import com.jsh.erp.datasource.entities.UserBusiness;
 import com.jsh.erp.datasource.entities.UserBusinessExample;
 import com.jsh.erp.datasource.mappers.UserBusinessMapper;
 import com.jsh.erp.datasource.mappers.UserBusinessMapperEx;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.exception.JshException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,8 +33,6 @@ public class UserBusinessService {
     private UserBusinessMapper userBusinessMapper;
     @Resource
     private UserBusinessMapperEx userBusinessMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
 
@@ -59,6 +59,7 @@ public class UserBusinessService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "关联关系", type = LogType.ADD)
     public int insertUserBusiness(JSONObject obj, HttpServletRequest request) throws Exception {
         UserBusiness userBusiness = JSONObject.parseObject(obj.toJSONString(), UserBusiness.class);
         int result=0;
@@ -68,7 +69,6 @@ public class UserBusinessService {
             newValue = newValue.replaceAll("\\[0\\]","").replaceAll("\\[\\]","");
             userBusiness.setValue(newValue);
             result=userBusinessMapper.insertSelective(userBusiness);
-            logService.insertLog("关联关系", BusinessConstants.LOG_OPERATION_TYPE_ADD, request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -76,6 +76,7 @@ public class UserBusinessService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "关联关系", type = LogType.EDIT)
     public int updateUserBusiness(JSONObject obj, HttpServletRequest request) throws Exception {
         UserBusiness userBusiness = JSONObject.parseObject(obj.toJSONString(), UserBusiness.class);
         int result=0;
@@ -85,7 +86,6 @@ public class UserBusinessService {
             newValue = newValue.replaceAll("\\[0\\]","").replaceAll("\\[\\]","");
             userBusiness.setValue(newValue);
             result=userBusinessMapper.updateByPrimaryKeySelective(userBusiness);
-            logService.insertLog("关联关系", BusinessConstants.LOG_OPERATION_TYPE_EDIT, request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -103,10 +103,8 @@ public class UserBusinessService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "关联关系", type = LogType.DELETE, contentTemplate = "{ids}")
     public int batchDeleteUserBusinessByIds(String ids) throws Exception{
-        logService.insertLog("关联关系",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_DELETE).append(ids).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         User userInfo=userService.getCurrentUser();
         String [] idArray=ids.split(",");
         int result=0;
@@ -159,10 +157,8 @@ public class UserBusinessService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "关联关系", type = LogType.EDIT, contentTemplate = "角色的按钮权限")
     public int updateBtnStr(String keyId, String type, String btnStr) throws Exception{
-        logService.insertLog("关联关系",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append("角色的按钮权限").toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         UserBusiness userBusiness = new UserBusiness();
         userBusiness.setBtnStr(btnStr);
         UserBusinessExample example = new UserBusinessExample();

@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.AccountItem;
@@ -38,8 +40,6 @@ public class InOutItemService {
     private InOutItemMapperEx inOutItemMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
     @Resource
     private AccountItemMapperEx accountItemMapperEx;
 
@@ -90,6 +90,7 @@ public class InOutItemService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "收支项目", type = LogType.ADD, contentTemplate = "{obj.name}")
     public int insertInOutItem(JSONObject obj, HttpServletRequest request)throws Exception {
         InOutItem inOutItem = JSONObject.parseObject(obj.toJSONString(), InOutItem.class);
         int exist = checkIsNameAndTypeExist(inOutItem.getId(), inOutItem.getName(), inOutItem.getType());
@@ -102,8 +103,6 @@ public class InOutItemService {
         try{
             inOutItem.setEnabled(true);
             result=inOutItemMapper.insertSelective(inOutItem);
-            logService.insertLog("收支项目",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(inOutItem.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -111,6 +110,7 @@ public class InOutItemService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "收支项目", type = LogType.EDIT, contentTemplate = "{obj.name}")
     public int updateInOutItem(JSONObject obj, HttpServletRequest request)throws Exception {
         InOutItem inOutItem = JSONObject.parseObject(obj.toJSONString(), InOutItem.class);
         int exist = checkIsNameAndTypeExist(inOutItem.getId(), inOutItem.getName(), inOutItem.getType());
@@ -122,8 +122,6 @@ public class InOutItemService {
         int result=0;
         try{
             result=inOutItemMapper.updateByPrimaryKeySelective(inOutItem);
-            logService.insertLog("收支项目",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(inOutItem.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -141,6 +139,7 @@ public class InOutItemService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "收支项目", type = LogType.DELETE, contentTemplate = "{entityNames}")
     public int batchDeleteInOutItemByIds(String ids)throws Exception {
         int result = 0;
         String [] idArray=ids.split(",");
@@ -158,14 +157,6 @@ public class InOutItemService {
                     ExceptionConstants.DELETE_FORCE_CONFIRM_MSG);
         }
         //校验通过执行删除操作
-        StringBuffer sb = new StringBuffer();
-        sb.append(BusinessConstants.LOG_OPERATION_TYPE_DELETE);
-        List<InOutItem> list = getInOutItemListByIds(ids);
-        for(InOutItem inOutItem: list){
-            sb.append("[").append(inOutItem.getName()).append("]");
-        }
-        logService.insertLog("收支项目", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         User userInfo=userService.getCurrentUser();
         try{
             result=inOutItemMapperEx.batchDeleteInOutItemByIds(new Date(),userInfo==null?null:userInfo.getId(),idArray);
@@ -225,10 +216,8 @@ public class InOutItemService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "收支项目", type = LogType.ENABLED)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("收支项目",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> inOutItemIds = StringUtil.strToLongList(ids);
         InOutItem inOutItem = new InOutItem();
         inOutItem.setEnabled(status);

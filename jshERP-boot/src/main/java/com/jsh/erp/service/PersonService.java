@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.AccountHead;
@@ -40,8 +42,6 @@ public class PersonService {
     private PersonMapperEx personMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
     @Resource
     private AccountHeadMapperEx accountHeadMapperEx;
     @Resource
@@ -94,14 +94,13 @@ public class PersonService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "经手人", type = LogType.ADD, contentTemplate = "{obj.name}")
     public int insertPerson(JSONObject obj, HttpServletRequest request)throws Exception {
         Person person = JSONObject.parseObject(obj.toJSONString(), Person.class);
         int result=0;
         try{
             person.setEnabled(true);
             result=personMapper.insertSelective(person);
-            logService.insertLog("经手人",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(person.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -109,13 +108,12 @@ public class PersonService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "经手人", type = LogType.EDIT, contentTemplate = "{obj.name}")
     public int updatePerson(JSONObject obj, HttpServletRequest request)throws Exception {
         Person person = JSONObject.parseObject(obj.toJSONString(), Person.class);
         int result=0;
         try{
             result=personMapper.updateByPrimaryKeySelective(person);
-            logService.insertLog("经手人",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(person.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -133,6 +131,7 @@ public class PersonService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "经手人", type = LogType.DELETE, contentTemplate = "{entityNames}")
     public int batchDeletePersonByIds(String ids)throws Exception {
         int result =0;
         String [] idArray=ids.split(",");
@@ -162,15 +161,6 @@ public class PersonService {
             throw new BusinessRunTimeException(ExceptionConstants.DELETE_FORCE_CONFIRM_CODE,
                     ExceptionConstants.DELETE_FORCE_CONFIRM_MSG);
         }
-        //记录日志
-        StringBuffer sb = new StringBuffer();
-        sb.append(BusinessConstants.LOG_OPERATION_TYPE_DELETE);
-        List<Person> list = getPersonListByIds(ids);
-        for(Person person: list){
-            sb.append("[").append(person.getName()).append("]");
-        }
-        logService.insertLog("经手人", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         //删除经手人
         try{
             result=personMapperEx.batchDeletePersonByIds(idArray);
@@ -225,10 +215,8 @@ public class PersonService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "经手人", type = LogType.ENABLED)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("经手人",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> personIds = StringUtil.strToLongList(ids);
         Person person = new Person();
         person.setEnabled(status);

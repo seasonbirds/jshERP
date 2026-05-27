@@ -10,6 +10,8 @@ import com.jsh.erp.datasource.mappers.*;
 import com.jsh.erp.datasource.vo.MaterialDepotStock;
 import com.jsh.erp.datasource.vo.MaterialVoSearch;
 import com.jsh.erp.exception.BusinessRunTimeException;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.exception.JshException;
 import com.jsh.erp.utils.*;
 import jxl.Sheet;
@@ -45,8 +47,6 @@ public class MaterialService {
     private MaterialCategoryMapperEx materialCategoryMapperEx;
     @Resource
     private MaterialExtendMapperEx materialExtendMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
     @Resource
@@ -153,6 +153,7 @@ public class MaterialService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品", type = LogType.ADD, contentTemplate = "{obj.name}")
     public int insertMaterial(JSONObject obj, HttpServletRequest request)throws Exception {
         Material m = JSONObject.parseObject(obj.toJSONString(), Material.class);
         m.setEnabled(true);
@@ -184,8 +185,6 @@ public class MaterialService {
                     }
                 }
             }
-            logService.insertLog("商品",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(m.getName()).toString(), request);
             return 1;
         }
         catch (BusinessRunTimeException ex) {
@@ -198,6 +197,7 @@ public class MaterialService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品", type = LogType.EDIT, contentTemplate = "{obj.name}")
     public int updateMaterial(JSONObject obj, HttpServletRequest request) throws Exception{
         Material material = JSONObject.parseObject(obj.toJSONString(), Material.class);
         //构造多属性数组字符串
@@ -239,8 +239,6 @@ public class MaterialService {
                     }
                 }
             }
-            logService.insertLog("商品",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(material.getName()).toString(), request);
             return 1;
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -259,6 +257,7 @@ public class MaterialService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品", type = LogType.DELETE, contentTemplate = "{entityNames}")
     public int batchDeleteMaterialByIds(String ids) throws Exception{
         String [] idArray=ids.split(",");
         //校验单据子表	jsh_depot_item
@@ -274,20 +273,14 @@ public class MaterialService {
             throw new BusinessRunTimeException(ExceptionConstants.DELETE_FORCE_CONFIRM_CODE,
                     ExceptionConstants.DELETE_FORCE_CONFIRM_MSG);
         }
-        //记录日志
-        StringBuffer sb = new StringBuffer();
-        sb.append(BusinessConstants.LOG_OPERATION_TYPE_DELETE);
         //路径列表
         List<String> pathList = new ArrayList<>();
         List<Material> list = getMaterialListByIds(ids);
         for(Material material: list){
-            sb.append("[").append(material.getName()).append("]");
             if(StringUtil.isNotEmpty(material.getImgName())) {
                 pathList.add(material.getImgName());
             }
         }
-        logService.insertLog("商品", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         User userInfo=userService.getCurrentUser();
         //校验通过执行删除操作
         try{
@@ -323,10 +316,8 @@ public class MaterialService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品", type = LogType.EDIT)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("商品",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(ids).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> materialIds = StringUtil.strToLongList(ids);
         Material material = new Material();
         material.setEnabled(status);
@@ -563,6 +554,7 @@ public class MaterialService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品", type = LogType.IMPORT, contentTemplate = "商品")
     public BaseResponseInfo importExcel(MultipartFile file, HttpServletRequest request) throws Exception {
         BaseResponseInfo info = new BaseResponseInfo();
         try {
@@ -842,9 +834,6 @@ public class MaterialService {
                 batchDeleteCurrentStockByMaterialList(deleteCurrentStockMaterialIdList);
                 materialCurrentStockMapperEx.batchInsert(insertCurrentStockMaterialList);
             }
-            logService.insertLog("商品",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_IMPORT).append(mList.size()).append(BusinessConstants.LOG_DATA_UNIT).toString(),
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
             Long endTime = System.currentTimeMillis();
             logger.info("导入耗时：{}", endTime-beginTime);
             info.code = 200;

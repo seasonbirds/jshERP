@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.*;
 import com.jsh.erp.datasource.mappers.FunctionMapper;
@@ -37,9 +39,6 @@ public class FunctionService {
 
     @Resource
     private SystemConfigService systemConfigService;
-
-    @Resource
-    private LogService logService;
 
     public Function getFunction(long id)throws Exception {
         Function result=null;
@@ -90,6 +89,7 @@ public class FunctionService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "功能", type = LogType.ADD, contentTemplate = "{obj.name}")
     public int insertFunction(JSONObject obj, HttpServletRequest request)throws Exception {
         Function functions = JSONObject.parseObject(obj.toJSONString(), Function.class);
         int result=0;
@@ -98,8 +98,6 @@ public class FunctionService {
                 functions.setState(false);
                 functions.setType("电脑版");
                 result = functionsMapper.insertSelective(functions);
-                logService.insertLog("功能",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(functions.getName()).toString(), request);
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -108,14 +106,13 @@ public class FunctionService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "功能", type = LogType.EDIT, contentTemplate = "{obj.name}")
     public int updateFunction(JSONObject obj, HttpServletRequest request) throws Exception{
         Function functions = JSONObject.parseObject(obj.toJSONString(), Function.class);
         int result=0;
         try{
             if(BusinessConstants.DEFAULT_MANAGER.equals(userService.getCurrentUser().getLoginName())) {
                 result = functionsMapper.updateByPrimaryKeySelective(functions);
-                logService.insertLog("功能",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(functions.getName()).toString(), request);
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -134,21 +131,15 @@ public class FunctionService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "功能", type = LogType.DELETE, contentTemplate = "{entityNames}")
     public int batchDeleteFunctionByIds(String ids)throws Exception {
-        StringBuffer sb = new StringBuffer();
-        sb.append(BusinessConstants.LOG_OPERATION_TYPE_DELETE);
         List<Function> list = getFunctionListByIds(ids);
-        for(Function functions: list){
-            sb.append("[").append(functions.getName()).append("]");
-        }
         User userInfo=userService.getCurrentUser();
         String [] idArray=ids.split(",");
         int result=0;
         try{
             if(BusinessConstants.DEFAULT_MANAGER.equals(userService.getCurrentUser().getLoginName())) {
                 result = functionMapperEx.batchDeleteFunctionByIds(new Date(), userInfo == null ? null : userInfo.getId(), idArray);
-                logService.insertLog("功能", sb.toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);

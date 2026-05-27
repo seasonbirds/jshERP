@@ -2,6 +2,8 @@ package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -37,8 +39,6 @@ public class DepotService {
     private SystemConfigService systemConfigService;
     @Resource
     private UserBusinessService userBusinessService;
-    @Resource
-    private LogService logService;
     @Resource
     private DepotItemMapperEx depotItemMapperEx;
     @Resource
@@ -100,6 +100,7 @@ public class DepotService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "仓库", type = LogType.ADD, contentTemplate = "{obj.name}")
     public int insertDepot(JSONObject obj, HttpServletRequest request)throws Exception {
         Depot depot = JSONObject.parseObject(obj.toJSONString(), Depot.class);
         int result=0;
@@ -133,8 +134,6 @@ public class DepotService {
                 ubObj.put("value", ubInfo.getValue() + ubKey);
                 userBusinessService.updateUserBusiness(ubObj, request);
             }
-            logService.insertLog("仓库",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(depot.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -142,13 +141,12 @@ public class DepotService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "仓库", type = LogType.EDIT, contentTemplate = "{obj.name}")
     public int updateDepot(JSONObject obj, HttpServletRequest request) throws Exception{
         Depot depot = JSONObject.parseObject(obj.toJSONString(), Depot.class);
         int result=0;
         try{
             result= depotMapper.updateByPrimaryKeySelective(depot);
-            logService.insertLog("仓库",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(depot.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -166,6 +164,7 @@ public class DepotService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "仓库", type = LogType.DELETE, contentTemplate = "{entityNames}")
     public int batchDeleteDepotByIds(String ids)throws Exception {
         int result=0;
         String [] idArray=ids.split(",");
@@ -178,13 +177,6 @@ public class DepotService {
                     ExceptionConstants.DELETE_FORCE_CONFIRM_MSG);
         }
         try{
-            //记录日志
-            StringBuffer sb = new StringBuffer();
-            sb.append(BusinessConstants.LOG_OPERATION_TYPE_DELETE);
-            List<Depot> list = getDepotListByIds(ids);
-            for(Depot depot: list){
-                sb.append("[").append(depot.getName()).append("]");
-            }
             User userInfo=userService.getCurrentUser();
             //校验通过执行删除操作
             //删除仓库关联的商品的初始库存
@@ -193,9 +185,6 @@ public class DepotService {
             materialCurrentStockMapperEx.batchDeleteByDepots(idArray);
             //删除仓库
             result = depotMapperEx.batchDeleteDepotByIds(new Date(),userInfo==null?null:userInfo.getId(),idArray);
-            //记录日志
-            logService.insertLog("仓库", sb.toString(),
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         } catch (Exception e) {
             JshException.writeFail(logger, e);
         }
@@ -229,6 +218,7 @@ public class DepotService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "仓库", type = LogType.EDIT, contentTemplate = "{depotId}")
     public int updateIsDefault(Long depotId) throws Exception{
         int result=0;
         try{
@@ -244,8 +234,6 @@ public class DepotService {
             DepotExample example = new DepotExample();
             example.createCriteria().andIdEqualTo(depotId);
             depotMapper.updateByExampleSelective(depot, example);
-            logService.insertLog("仓库",BusinessConstants.LOG_OPERATION_TYPE_EDIT+depotId,
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
             result = 1;
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -373,10 +361,8 @@ public class DepotService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "仓库", type = LogType.ENABLED)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("仓库",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> depotIds = StringUtil.strToLongList(ids);
         Depot depot = new Depot();
         depot.setEnabled(status);
