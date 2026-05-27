@@ -1,6 +1,7 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.*;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.Organization;
@@ -16,8 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -38,8 +37,6 @@ public class OrganizationService {
     private OrganizationMapperEx organizationMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
 
     public Organization getOrganization(long id) throws Exception {
         return organizationMapper.selectByPrimaryKey(id);
@@ -58,6 +55,7 @@ public class OrganizationService {
         return list;
     }
 
+    @AuditLog(module="机构", operation=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertOrganization(JSONObject obj, HttpServletRequest request)throws Exception {
         Organization organization = JSONObject.parseObject(obj.toJSONString(), Organization.class);
@@ -66,13 +64,13 @@ public class OrganizationService {
         int result=0;
         try{
             result=organizationMapper.insertSelective(organization);
-            logService.insertLog("机构",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(organization.getOrgAbr()).toString(),request);
+            AuditContextHolder.setContentDetail(organization.getOrgAbr());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
+    @AuditLog(module="机构", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateOrganization(JSONObject obj, HttpServletRequest request)throws Exception {
         Organization organization = JSONObject.parseObject(obj.toJSONString(), Organization.class);
@@ -80,8 +78,7 @@ public class OrganizationService {
         int result=0;
         try{
             result=organizationMapperEx.editOrganization(organization);
-            logService.insertLog("机构",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(organization.getOrgAbr()).toString(), request);
+            AuditContextHolder.setContentDetail(organization.getOrgAbr());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -98,6 +95,7 @@ public class OrganizationService {
         return batchDeleteOrganizationByIds(ids);
     }
 
+    @AuditLog(module="机构", operation=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteOrganizationByIds(String ids) throws Exception{
         StringBuffer sb = new StringBuffer();
@@ -106,8 +104,7 @@ public class OrganizationService {
         for(Organization organization: list){
             sb.append("[").append(organization.getOrgAbr()).append("]");
         }
-        logService.insertLog("机构", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        AuditContextHolder.setFullContent(sb.toString());
         User userInfo=userService.getCurrentUser();
         String [] idArray=ids.split(",");
         int result=0;

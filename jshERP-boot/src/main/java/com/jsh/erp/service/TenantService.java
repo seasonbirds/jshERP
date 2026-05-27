@@ -1,6 +1,7 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.*;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.Tenant;
 import com.jsh.erp.datasource.entities.TenantEx;
@@ -19,8 +20,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -44,9 +43,6 @@ public class TenantService {
 
     @Resource
     private UserService userService;
-
-    @Resource
-    private LogService logService;
 
     @Value("${manage.roleId}")
     private Integer manageRoleId;
@@ -182,6 +178,7 @@ public class TenantService {
         return tenant;
     }
 
+    @AuditLog(module="用户", operation=OperationType.EDIT)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
         int result=0;
         try{
@@ -192,9 +189,7 @@ public class TenantService {
                 } else {
                     statusStr = "批量禁用";
                 }
-                logService.insertLog("用户",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(ids).append("-").append(statusStr).toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                AuditContextHolder.setFullContent("修改" + ids + "-" + statusStr);
                 List<Long> idList = StringUtil.strToLongList(ids);
                 Tenant tenant = new Tenant();
                 tenant.setEnabled(status);

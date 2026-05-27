@@ -8,6 +8,9 @@ import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.CopyObjectResult;
 import com.aliyun.oss.model.PutObjectRequest;
+import com.jsh.erp.annotation.AuditLog;
+import com.jsh.erp.annotation.AuditContextHolder;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.SystemConfig;
 import com.jsh.erp.datasource.entities.SystemConfigExample;
@@ -22,8 +25,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.FileCopyUtils;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
@@ -53,9 +54,6 @@ public class SystemConfigService {
     private PlatformConfigService platformConfigService;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
-
     @Value(value="${file.uploadType}")
     private Long fileUploadType;
 
@@ -97,14 +95,18 @@ public class SystemConfigService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @AuditLog(module = "系统配置", operation = OperationType.ADD, useExplicitUserId = true)
     public int insertSystemConfig(JSONObject obj, HttpServletRequest request) throws Exception{
         SystemConfig systemConfig = JSONObject.parseObject(obj.toJSONString(), SystemConfig.class);
         int result=0;
         try{
             result=systemConfigMapper.insertSelective(systemConfig);
+            Long userId = userService.getCurrentUser().getId();
+            Long tenantId = userService.getCurrentUser().getTenantId();
+            AuditContextHolder.setUserId(userId);
+            AuditContextHolder.setTenantId(tenantId);
             String logInfo = StringUtil.isNotEmpty(systemConfig.getCompanyName())?systemConfig.getCompanyName():"配置信息";
-            logService.insertLogWithUserId(userService.getCurrentUser().getId(), userService.getCurrentUser().getTenantId(), "系统配置",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(logInfo).toString(), request);
+            AuditContextHolder.setContentDetail(logInfo);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -112,14 +114,18 @@ public class SystemConfigService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @AuditLog(module = "系统配置", operation = OperationType.EDIT, useExplicitUserId = true)
     public int updateSystemConfig(JSONObject obj, HttpServletRequest request) throws Exception{
         SystemConfig systemConfig = JSONObject.parseObject(obj.toJSONString(), SystemConfig.class);
         int result=0;
         try{
             result = systemConfigMapper.updateByPrimaryKeySelective(systemConfig);
+            Long userId = userService.getCurrentUser().getId();
+            Long tenantId = userService.getCurrentUser().getTenantId();
+            AuditContextHolder.setUserId(userId);
+            AuditContextHolder.setTenantId(tenantId);
             String logInfo = StringUtil.isNotEmpty(systemConfig.getCompanyName())?systemConfig.getCompanyName():"配置信息";
-            logService.insertLogWithUserId(userService.getCurrentUser().getId(), userService.getCurrentUser().getTenantId(), "系统配置",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(logInfo).toString(), request);
+            AuditContextHolder.setContentDetail(logInfo);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -137,10 +143,9 @@ public class SystemConfigService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @AuditLog(module = "系统配置", operation = OperationType.DELETE)
     public int batchDeleteSystemConfigByIds(String ids)throws Exception {
-        logService.insertLog("系统配置",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_DELETE).append(ids).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        AuditContextHolder.setFullContent("删除" + ids);
         User userInfo=userService.getCurrentUser();
         String [] idArray=ids.split(",");
         int result=0;

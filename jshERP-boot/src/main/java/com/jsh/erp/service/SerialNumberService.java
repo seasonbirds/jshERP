@@ -1,6 +1,7 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.*;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -12,8 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -36,8 +35,6 @@ public class SerialNumberService {
     private MaterialService materialService;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
 
     public SerialNumber getSerialNumber(long id)throws Exception {
         SerialNumber result=null;
@@ -145,7 +142,7 @@ public class SerialNumberService {
         for (String sn : snArray) {
             int isNotSellCount = serialNumberMapperEx.getIsNotSellCountByParam(materialId, sn);
             if (isNotSellCount == 0) {
-                //如果序列号不存在或者已售出则进行提示，不再进行后续的出售操作
+                //如果序列号不存在或者已售出则进行提示，不再进行后续的出售操作?
                 throw new BusinessRunTimeException(ExceptionConstants.SERIAL_NUMBERE_NOT_EXISTS_CODE,
                         String.format(ExceptionConstants.SERIAL_NUMBERE_NOT_EXISTS_MSG, sn));
             }
@@ -174,6 +171,7 @@ public class SerialNumberService {
     /**
      * 批量添加序列号，最多500个
      */
+    @AuditLog(module="序列号", operation=OperationType.BATCH_ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batAddSerialNumber(String materialCode, String serialNumberPrefix, Integer batAddTotal, String remark)throws Exception {
         int result=0;
@@ -208,9 +206,7 @@ public class SerialNumberService {
                     list.add(each);
                 }
                 result = serialNumberMapperEx.batAddSerialNumber(list);
-                logService.insertLog("序列号",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_BATCH_ADD).append(batAddTotal).append(BusinessConstants.LOG_DATA_UNIT).toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                AuditContextHolder.setContentDetail(batAddTotal + "条");
             }
         } catch (Exception e) {
             JshException.writeFail(logger, e);
@@ -239,7 +235,7 @@ public class SerialNumberService {
     }
 
     public void addSerialNumberByBill(String type, String subType, String inBillNo, Long materialId, Long depotId, BigDecimal inPrice, String snList) throws Exception {
-        //录入序列号的时候不能和库里面的重复-入库
+        //录入序列号的时候不能和库里的重复-入库
         if ((BusinessConstants.SUB_TYPE_PURCHASE.equals(subType) ||
                 BusinessConstants.SUB_TYPE_OTHER.equals(subType) ||
                 BusinessConstants.SUB_TYPE_SALES_RETURN.equals(subType)||

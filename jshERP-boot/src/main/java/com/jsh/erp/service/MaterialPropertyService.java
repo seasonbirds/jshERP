@@ -1,6 +1,7 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.*;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.MaterialProperty;
 import com.jsh.erp.datasource.entities.MaterialPropertyExample;
@@ -13,8 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -31,8 +30,6 @@ public class MaterialPropertyService {
     private MaterialPropertyMapperEx materialPropertyMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
 
     public MaterialProperty getMaterialProperty(long id)throws Exception {
         MaterialProperty result=null;
@@ -107,28 +104,28 @@ public class MaterialPropertyService {
         list.add(mp3);
     }
 
+    @AuditLog(module="商品属性", operation=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertMaterialProperty(JSONObject obj, HttpServletRequest request)throws Exception {
         MaterialProperty materialProperty = JSONObject.parseObject(obj.toJSONString(), MaterialProperty.class);
         int  result=0;
         try{
             result = materialPropertyMapper.insertSelective(materialProperty);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(materialProperty.getNativeName()).toString(), request);
+            AuditContextHolder.setContentDetail(materialProperty.getNativeName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(module="商品属性", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateMaterialProperty(JSONObject obj, HttpServletRequest request)throws Exception {
         MaterialProperty materialProperty = JSONObject.parseObject(obj.toJSONString(), MaterialProperty.class);
         int  result=0;
         try{
             result = materialPropertyMapper.updateByPrimaryKeySelective(materialProperty);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(materialProperty.getNativeName()).toString(), request);
+            AuditContextHolder.setContentDetail(materialProperty.getNativeName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -145,6 +142,7 @@ public class MaterialPropertyService {
         return batchDeleteMaterialPropertyByIds(ids);
     }
 
+    @AuditLog(module="商品属性", operation=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteMaterialPropertyByIds(String ids) throws Exception{
         User userInfo=userService.getCurrentUser();
@@ -152,9 +150,7 @@ public class MaterialPropertyService {
         int  result=0;
         try{
             result = materialPropertyMapperEx.batchDeleteMaterialPropertyByIds(new Date(), userInfo == null ? null : userInfo.getId(), idArray);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_DELETE).append(ids).toString(),
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+            AuditContextHolder.setFullContent("删除" + ids);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
