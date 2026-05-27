@@ -1,5 +1,6 @@
 package com.jsh.erp.service;
 
+import com.jsh.erp.annotation.*;
 import com.jsh.erp.datasource.entities.*;
 import com.jsh.erp.datasource.mappers.TenantMapper;
 import com.jsh.erp.exception.BusinessParamCheckingException;
@@ -39,8 +40,6 @@ public class UserService {
     private UserMapperEx userMapperEx;
     @Resource
     private OrgaUserRelService orgaUserRelService;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
     @Resource
@@ -151,6 +150,7 @@ public class UserService {
         return result;
     }
 
+    @AuditLog(module="用户", operation=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertUser(JSONObject obj, HttpServletRequest request)throws Exception {
         User user = JSONObject.parseObject(obj.toJSONString(), User.class);
@@ -165,14 +165,14 @@ public class UserService {
         int result=0;
         try{
             result=userMapper.insertSelective(user);
-            logService.insertLog("用户",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(user.getLoginName()).toString(), request);
+            AuditContextHolder.setContentDetail(user.getLoginName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(module="用户", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateUser(JSONObject obj, HttpServletRequest request) throws Exception{
         User user = JSONObject.parseObject(obj.toJSONString(), User.class);
@@ -182,8 +182,7 @@ public class UserService {
             Object userId = redisService.getObjectFromSessionByKey(request,"userId");
             if (userId != null) {
                 result = userMapper.updateByPrimaryKeySelective(user);
-                logService.insertLog("用户",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(user.getLoginName()).toString(), request);
+                AuditContextHolder.setContentDetail(user.getLoginName());
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -191,6 +190,7 @@ public class UserService {
         return result;
     }
 
+    @AuditLog(module="用户", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateUserByObj(User user, HttpServletRequest request) throws Exception{
         int result=0;
@@ -199,9 +199,7 @@ public class UserService {
             Object userId = redisService.getObjectFromSessionByKey(request,"userId");
             if (userId != null) {
                 result = userMapper.updateByPrimaryKeySelective(user);
-                logService.insertLog("用户",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(user.getId()).toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                AuditContextHolder.setContentDetail(String.valueOf(user.getId()));
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -209,6 +207,7 @@ public class UserService {
         return result;
     }
 
+    @AuditLog(module="用户", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int resetPwd(String md5Pwd, Long id, HttpServletRequest request) throws Exception{
         int result=0;
@@ -225,9 +224,7 @@ public class UserService {
                 Object userId = redisService.getObjectFromSessionByKey(request,"userId");
                 if (userId != null) {
                     result = userMapper.updateByPrimaryKeySelective(user);
-                    logService.insertLog("用户",
-                            new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(id).toString(),
-                            ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                    AuditContextHolder.setContentDetail(String.valueOf(id));
                 }
             }catch(Exception e){
                 JshException.writeFail(logger, e);
@@ -236,11 +233,13 @@ public class UserService {
         return result;
     }
 
+    @AuditLog(module="用户", operation=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteUser(Long id, HttpServletRequest request)throws Exception {
         return batDeleteUser(id.toString(), request);
     }
 
+    @AuditLog(module="用户", operation=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteUser(String ids, HttpServletRequest request)throws Exception {
         return batDeleteUser(ids, request);
@@ -273,8 +272,7 @@ public class UserService {
                         redisService.deleteObjectByUser(Long.valueOf(idStr));
                     }
                 }
-                logService.insertLog("用户", sb.toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                AuditContextHolder.setFullContent(sb.toString());
             }
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -326,6 +324,7 @@ public class UserService {
      * @return
      * @throws Exception
      */
+    @AuditLog(module="用户", operation=OperationType.LOGIN, useExplicitUserId=true)
     public Map<String, Object> login(String loginName, String password, HttpServletRequest request) throws Exception {
         Map<String, Object> data = new HashMap<>();
         String msgTip = "";
@@ -390,9 +389,9 @@ public class UserService {
                 sendEmailToCurrentUser(request, user);
             }
             redisService.storageObjectBySession(token,"clientIp", Tools.getLocalIp(request));
-            logService.insertLogWithUserId(user.getId(), user.getTenantId(), "用户",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_LOGIN).append(user.getLoginName()).toString(),
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+            AuditContextHolder.setUserId(user.getId());
+            AuditContextHolder.setTenantId(user.getTenantId());
+            AuditContextHolder.setContentDetail(user.getLoginName());
             data.put("token", token);
             data.put("user", user);
             data.put("pwdSimple", pwdSimple);
@@ -525,15 +524,13 @@ public class UserService {
         return userId;
     }
 
+    @AuditLog(module="用户", operation=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public void addUserAndOrgUserRel(UserEx ue, HttpServletRequest request) throws Exception{
         if(BusinessConstants.DEFAULT_MANAGER.equals(ue.getLoginName())) {
             throw new BusinessRunTimeException(ExceptionConstants.USER_NAME_LIMIT_USE_CODE,
                     ExceptionConstants.USER_NAME_LIMIT_USE_MSG);
         } else {
-            logService.insertLog("用户",
-                    BusinessConstants.LOG_OPERATION_TYPE_ADD,
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
             //检查用户名和登录名
             checkLoginName(ue);
             //新增用户信息
@@ -675,15 +672,14 @@ public class UserService {
         }
     }
 
+    @AuditLog(module="用户", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public void updateUserAndOrgUserRel(UserEx ue, HttpServletRequest request) throws Exception{
         if(BusinessConstants.DEFAULT_MANAGER.equals(ue.getLoginName())) {
             throw new BusinessRunTimeException(ExceptionConstants.USER_NAME_LIMIT_USE_CODE,
                     ExceptionConstants.USER_NAME_LIMIT_USE_MSG);
         } else {
-            logService.insertLog("用户",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(ue.getId()).toString(),
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+            AuditContextHolder.setContentDetail(String.valueOf(ue.getId()));
             //检查用户名和登录名
             checkLoginName(ue);
             //更新用户信息
@@ -898,6 +894,7 @@ public class UserService {
         return btnStrWithUrlArr;
     }
 
+    @AuditLog(module="用户", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Byte status, String ids, HttpServletRequest request)throws Exception {
         int result=0;
@@ -936,10 +933,9 @@ public class UserService {
             UserExample example = new UserExample();
             example.createCriteria().andIdIn(idList);
             result = userMapper.updateByExampleSelective(user, example);
-            logService.insertLog("用户",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(userStr).append("-").append(statusStr).toString(),
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+            AuditContextHolder.setFullContent(new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(userStr).append("-").append(statusStr).toString());
         } else {
+            AuditContextHolder.skipLog();
             result = 1;
         }
         return result;

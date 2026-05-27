@@ -2,6 +2,7 @@ package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.*;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.MaterialAttribute;
 import com.jsh.erp.datasource.entities.MaterialAttributeExample;
@@ -24,9 +25,6 @@ import java.util.List;
 @Service
 public class MaterialAttributeService {
     private Logger logger = LoggerFactory.getLogger(MaterialAttributeService.class);
-
-    @Resource
-    private LogService logService;
 
     @Resource
     private MaterialAttributeMapper materialAttributeMapper;
@@ -68,13 +66,13 @@ public class MaterialAttributeService {
         return list;
     }
 
+    @AuditLog(module="商品属性", operation=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertMaterialAttribute(JSONObject obj, HttpServletRequest request)throws Exception {
         MaterialAttribute m = JSONObject.parseObject(obj.toJSONString(), MaterialAttribute.class);
         try{
             materialAttributeMapper.insertSelective(m);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(m.getAttributeName()).toString(), request);
+            AuditContextHolder.setContentDetail(m.getAttributeName());
             return 1;
         }
         catch (BusinessRunTimeException ex) {
@@ -86,13 +84,13 @@ public class MaterialAttributeService {
         }
     }
 
+    @AuditLog(module="商品属性", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateMaterialAttribute(JSONObject obj, HttpServletRequest request) throws Exception{
         MaterialAttribute materialAttribute = JSONObject.parseObject(obj.toJSONString(), MaterialAttribute.class);
         try{
             materialAttributeMapper.updateByPrimaryKeySelective(materialAttribute);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(materialAttribute.getAttributeName()).toString(), request);
+            AuditContextHolder.setContentDetail(materialAttribute.getAttributeName());
             return 1;
         }catch(Exception e){
             JshException.writeFail(logger, e);

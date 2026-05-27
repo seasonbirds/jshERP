@@ -1,6 +1,7 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.*;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -16,8 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
@@ -36,8 +35,6 @@ public class SupplierService {
 
     @Resource
     private SupplierMapperEx supplierMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
     @Resource
@@ -144,6 +141,7 @@ public class SupplierService {
         return list;
     }
 
+    @AuditLog(module="商家", operation=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertSupplier(JSONObject obj, HttpServletRequest request)throws Exception {
         Supplier supplier = JSONObject.parseObject(obj.toJSONString(), Supplier.class);
@@ -155,14 +153,14 @@ public class SupplierService {
             result=supplierMapper.insertSelective(supplier);
             //新增客户时给当前用户和租户自动授权
             setUserCustomerPermission(request, supplier);
-            logService.insertLog("商家",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(supplier.getSupplier()).toString(),request);
+            AuditContextHolder.setContentDetail(supplier.getSupplier());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(module="商家", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateSupplier(JSONObject obj, HttpServletRequest request)throws Exception {
         Supplier supplier = JSONObject.parseObject(obj.toJSONString(), Supplier.class);
@@ -175,19 +173,20 @@ public class SupplierService {
         int result=0;
         try{
             result=supplierMapper.updateByPrimaryKeySelective(supplier);
-            logService.insertLog("商家",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(supplier.getSupplier()).toString(), request);
+            AuditContextHolder.setContentDetail(supplier.getSupplier());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(module="商家", operation=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteSupplier(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteSupplierByIds(id.toString());
     }
 
+    @AuditLog(module="商家", operation=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteSupplier(String ids, HttpServletRequest request) throws Exception{
         return batchDeleteSupplierByIds(ids);
@@ -230,8 +229,7 @@ public class SupplierService {
         for(Supplier supplier: list){
             sb.append("[").append(supplier.getSupplier()).append("]");
         }
-        logService.insertLog("商家", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        AuditContextHolder.setFullContent(sb.toString());
         User userInfo=userService.getCurrentUser();
         //校验通过执行删除操作
         try{
@@ -364,11 +362,9 @@ public class SupplierService {
         return list;
     }
 
+    @AuditLog(module="商家", operation=OperationType.ENABLED)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("商家",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> supplierIds = StringUtil.strToLongList(ids);
         Supplier supplier = new Supplier();
         supplier.setEnabled(status);
@@ -446,6 +442,7 @@ public class SupplierService {
         }
     }
 
+    @AuditLog(module="", operation=OperationType.IMPORT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public void importVendor(MultipartFile file, HttpServletRequest request) throws Exception{
         String type = "供应商";
@@ -482,6 +479,7 @@ public class SupplierService {
         importExcel(sList, type, request);
     }
 
+    @AuditLog(module="", operation=OperationType.IMPORT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public void importCustomer(MultipartFile file, HttpServletRequest request) throws Exception{
         String type = "客户";
@@ -518,6 +516,7 @@ public class SupplierService {
         importExcel(sList, type, request);
     }
 
+    @AuditLog(module="", operation=OperationType.IMPORT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public void importMember(MultipartFile file, HttpServletRequest request) throws Exception{
         String type = "会员";
@@ -547,11 +546,11 @@ public class SupplierService {
         importExcel(sList, type, request);
     }
 
+    @AuditLog(module="", operation=OperationType.IMPORT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public BaseResponseInfo importExcel(List<Supplier> mList, String type, HttpServletRequest request) throws Exception {
-        logService.insertLog(type,
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_IMPORT).append(mList.size()).append(BusinessConstants.LOG_DATA_UNIT).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        AuditContextHolder.setModuleName(type);
+        AuditContextHolder.setContentDetail(String.valueOf(mList.size()) + "条");
         BaseResponseInfo info = new BaseResponseInfo();
         Map<String, Object> data = new HashMap<>();
         try {

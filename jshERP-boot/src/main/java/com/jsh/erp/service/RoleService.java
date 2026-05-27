@@ -1,6 +1,7 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.*;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.Role;
 import com.jsh.erp.datasource.entities.RoleEx;
@@ -15,8 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -33,8 +32,6 @@ public class RoleService {
 
     @Resource
     private RoleMapperEx roleMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
 
@@ -117,6 +114,7 @@ public class RoleService {
         return list;
     }
 
+    @AuditLog(module="角色", operation=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertRole(JSONObject obj, HttpServletRequest request)throws Exception {
         Role role = JSONObject.parseObject(obj.toJSONString(), Role.class);
@@ -124,33 +122,34 @@ public class RoleService {
         try{
             role.setEnabled(true);
             result=roleMapper.insertSelective(role);
-            logService.insertLog("角色",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(role.getName()).toString(), request);
+            AuditContextHolder.setContentDetail(role.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(module="角色", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateRole(JSONObject obj, HttpServletRequest request) throws Exception{
         Role role = JSONObject.parseObject(obj.toJSONString(), Role.class);
         int result=0;
         try{
             result=roleMapper.updateByPrimaryKeySelective(role);
-            logService.insertLog("角色",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(role.getName()).toString(), request);
+            AuditContextHolder.setContentDetail(role.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(module="角色", operation=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteRole(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteRoleByIds(id.toString());
     }
 
+    @AuditLog(module="角色", operation=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteRole(String ids, HttpServletRequest request) throws Exception{
         return batchDeleteRoleByIds(ids);
@@ -195,8 +194,7 @@ public class RoleService {
         for(Role role: list){
             sb.append("[").append(role.getName()).append("]");
         }
-        logService.insertLog("角色", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        AuditContextHolder.setFullContent(sb.toString());
         User userInfo=userService.getCurrentUser();
         String [] idArray=ids.split(",");
         int result=0;
@@ -212,11 +210,9 @@ public class RoleService {
         return roleMapperEx.getRoleWithoutTenant(roleId);
     }
 
+    @AuditLog(module="角色", operation=OperationType.ENABLED)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("角色",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> roleIds = StringUtil.strToLongList(ids);
         Role role = new Role();
         role.setEnabled(status);

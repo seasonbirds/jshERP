@@ -1,6 +1,7 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.*;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.OrgaUserRel;
 import com.jsh.erp.datasource.entities.OrgaUserRelExample;
@@ -38,50 +39,49 @@ public class OrgaUserRelService {
     private UserService userService;
     @Resource
     private OrganizationService organizationService;
-    @Resource
-    private LogService logService;
 
     public OrgaUserRel getOrgaUserRel(long id) throws Exception{
         return orgaUserRelMapper.selectByPrimaryKey(id);
     }
 
+    @AuditLog(module="用户与机构关系", operation=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertOrgaUserRel(JSONObject obj, HttpServletRequest request) throws Exception{
         OrgaUserRel orgaUserRel = JSONObject.parseObject(obj.toJSONString(), OrgaUserRel.class);
         int result=0;
         try{
             result=orgaUserRelMapper.insertSelective(orgaUserRel);
-            logService.insertLog("用户与机构关系", BusinessConstants.LOG_OPERATION_TYPE_ADD, request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
+    @AuditLog(module="用户与机构关系", operation=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateOrgaUserRel(JSONObject obj, HttpServletRequest request) throws Exception{
         OrgaUserRel orgaUserRel = JSONObject.parseObject(obj.toJSONString(), OrgaUserRel.class);
         int result=0;
         try{
             result=orgaUserRelMapper.updateByPrimaryKeySelective(orgaUserRel);
-            logService.insertLog("用户与机构关系",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(orgaUserRel.getId()).toString(), request);
+            AuditContextHolder.setContentDetail(String.valueOf(orgaUserRel.getId()));
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
+    @AuditLog(module="用户与机构关系", operation=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteOrgaUserRel(Long id, HttpServletRequest request)throws Exception {
         int result=0;
         try{
             result=orgaUserRelMapper.deleteByPrimaryKey(id);
-            logService.insertLog("用户与机构关系",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_DELETE).append(id).toString(), request);
+            AuditContextHolder.setContentDetail(String.valueOf(id));
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
+    @AuditLog(module="用户与机构关系", operation=OperationType.CUSTOM)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteOrgaUserRel(String ids, HttpServletRequest request)throws Exception {
         List<Long> idList = StringUtil.strToLongList(ids);
@@ -90,7 +90,7 @@ public class OrgaUserRelService {
         int result=0;
         try{
             result=orgaUserRelMapper.deleteByExample(example);
-            logService.insertLog("用户与机构关系", "批量删除,id集:" + ids, request);
+            AuditContextHolder.setFullContent("批量删除,id集:" + ids);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
