@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.Material;
@@ -19,8 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -38,8 +38,6 @@ public class MaterialCategoryService {
     private MaterialCategoryMapperEx materialCategoryMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
     @Resource
     private MaterialMapperEx materialMapperEx;
 
@@ -118,6 +116,7 @@ public class MaterialCategoryService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品类型", type = LogType.ADD, contentTemplate = "{obj.name}")
     public int insertMaterialCategory(JSONObject obj, HttpServletRequest request)throws Exception {
         MaterialCategory materialCategory = JSONObject.parseObject(obj.toJSONString(), MaterialCategory.class);
         materialCategory.setCreateTime(new Date());
@@ -125,8 +124,6 @@ public class MaterialCategoryService {
         int result=0;
         try{
             result=materialCategoryMapper.insertSelective(materialCategory);
-            logService.insertLog("商品类型",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(materialCategory.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -134,14 +131,13 @@ public class MaterialCategoryService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品类型", type = LogType.EDIT, contentTemplate = "{obj.name}")
     public int updateMaterialCategory(JSONObject obj, HttpServletRequest request) throws Exception{
         MaterialCategory materialCategory = JSONObject.parseObject(obj.toJSONString(), MaterialCategory.class);
         materialCategory.setUpdateTime(new Date());
         int result=0;
         try{
             result=materialCategoryMapperEx.editMaterialCategory(materialCategory);
-            logService.insertLog("商品类型",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(materialCategory.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -159,6 +155,7 @@ public class MaterialCategoryService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品类型", type = LogType.DELETE, contentTemplate = "{entityNames}")
     public int batchDeleteMaterialCategoryByIds(String ids) throws Exception {
         int result=0;
         String [] idArray=ids.split(",");
@@ -175,14 +172,6 @@ public class MaterialCategoryService {
             throw new BusinessRunTimeException(ExceptionConstants.DELETE_FORCE_CONFIRM_CODE,
                     ExceptionConstants.DELETE_FORCE_CONFIRM_MSG);
         }
-        StringBuffer sb = new StringBuffer();
-        sb.append(BusinessConstants.LOG_OPERATION_TYPE_DELETE);
-        List<MaterialCategory> list = getMaterialCategoryListByIds(ids);
-        for(MaterialCategory materialCategory: list){
-            sb.append("[").append(materialCategory.getName()).append("]");
-        }
-        logService.insertLog("商品类型", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         //更新时间
         Date updateDate =new Date();
         //更新人

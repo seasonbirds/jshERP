@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.Log;
 import com.jsh.erp.datasource.entities.LogExample;
+import com.jsh.erp.datasource.entities.User;
 import com.jsh.erp.datasource.mappers.LogMapper;
 import com.jsh.erp.datasource.mappers.LogMapperEx;
 import com.jsh.erp.datasource.vo.LogVo4List;
@@ -34,9 +35,6 @@ public class LogService {
 
     @Resource
     private UserService userService;
-
-    @Resource
-    private RedisService redisService;
 
     public Log getLog(long id)throws Exception {
         Log result=null;
@@ -128,48 +126,60 @@ public class LogService {
         return result;
     }
 
-    public void insertLog(String moduleName, String content, HttpServletRequest request)throws Exception{
-        try{
+    /**
+     * 供AOP切面调用的审计日志写入方法。
+     * 自动从请求上下文中获取当前用户ID和租户ID，获取客户端IP，写入审计日志。
+     * 使用insertLogWithUserId绕过租户过滤插件，直接写入日志记录。
+     *
+     * @param moduleName 模块名称（对应Log表的operation字段）
+     * @param content    日志内容
+     * @param request    HTTP请求
+     */
+    public void createAuditLog(String moduleName, String content, HttpServletRequest request) {
+        try {
             Long userId = userService.getUserId(request);
-            if(userId!=null) {
-                String clientIp = getLocalIp(request);
-                String createTime = Tools.getNow3();
-                Long count = logMapperEx.getCountByIpAndDate(userId, moduleName, clientIp, createTime);
-                if(count > 0) {
-                    //如果某个用户某个IP在同1秒内连续操作两遍，此时需要删除该redis记录，使其退出，防止恶意攻击
-                    redisService.deleteObjectByUserAndIp(userId, clientIp);
-                } else {
-                    Log log = new Log();
-                    log.setUserId(userId);
-                    log.setOperation(moduleName);
-                    log.setClientIp(getLocalIp(request));
-                    log.setCreateTime(new Date());
-                    Byte status = 0;
-                    log.setStatus(status);
-                    log.setContent(content);
-                    logMapper.insertSelective(log);
+            if (userId != null) {
+                Long tenantId = null;
+                try {
+                    User currentUser = userService.getCurrentUser();
+                    if (currentUser != null) {
+                        tenantId = currentUser.getTenantId();
+                    }
+                } catch (Exception e) {
+                    // 获取当前用户失败时tenantId保持null，不影响日志记录
                 }
+                createAuditLog(userId, tenantId, moduleName, content, request);
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             JshException.writeFail(logger, e);
         }
     }
 
-    public void insertLogWithUserId(Long userId, Long tenantId, String moduleName, String content, HttpServletRequest request)throws Exception{
-        try{
-            if(userId!=null) {
+    /**
+     * 供AOP切面调用的审计日志写入方法（指定userId和tenantId）。
+     * 用于登录等场景：用户尚未登录到session，无法从session获取userId，需要显式传入。
+     * 使用insertLogWithUserId绕过租户过滤插件，直接写入日志记录。
+     *
+     * @param userId     用户ID
+     * @param tenantId   租户ID（可为null）
+     * @param moduleName 模块名称（对应Log表的operation字段）
+     * @param content    日志内容
+     * @param request    HTTP请求
+     */
+    public void createAuditLog(Long userId, Long tenantId, String moduleName, String content, HttpServletRequest request) {
+        try {
+            if (userId != null) {
                 Log log = new Log();
                 log.setUserId(userId);
                 log.setOperation(moduleName);
                 log.setClientIp(getLocalIp(request));
                 log.setCreateTime(new Date());
-                Byte status = 0;
-                log.setStatus(status);
+                log.setStatus((byte) 0);
                 log.setContent(content);
                 log.setTenantId(tenantId);
                 logMapperEx.insertLogWithUserId(log);
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             JshException.writeFail(logger, e);
         }
     }

@@ -9,6 +9,8 @@ import com.jsh.erp.datasource.vo.DepotHeadVo4StatementAccount;
 import com.jsh.erp.datasource.vo.SupplierSimple;
 import com.jsh.erp.exception.BusinessRunTimeException;
 import com.jsh.erp.exception.JshException;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.utils.*;
 import jxl.Sheet;
 import jxl.Workbook;
@@ -36,8 +38,6 @@ public class SupplierService {
 
     @Resource
     private SupplierMapperEx supplierMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
     @Resource
@@ -145,6 +145,7 @@ public class SupplierService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商家", type = LogType.ADD, contentTemplate = "{obj.supplier}")
     public int insertSupplier(JSONObject obj, HttpServletRequest request)throws Exception {
         Supplier supplier = JSONObject.parseObject(obj.toJSONString(), Supplier.class);
         int result=0;
@@ -155,8 +156,6 @@ public class SupplierService {
             result=supplierMapper.insertSelective(supplier);
             //新增客户时给当前用户和租户自动授权
             setUserCustomerPermission(request, supplier);
-            logService.insertLog("商家",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(supplier.getSupplier()).toString(),request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -164,6 +163,7 @@ public class SupplierService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商家", type = LogType.EDIT, contentTemplate = "{obj.supplier}")
     public int updateSupplier(JSONObject obj, HttpServletRequest request)throws Exception {
         Supplier supplier = JSONObject.parseObject(obj.toJSONString(), Supplier.class);
         if(supplier.getBeginNeedPay() == null) {
@@ -175,8 +175,6 @@ public class SupplierService {
         int result=0;
         try{
             result=supplierMapper.updateByPrimaryKeySelective(supplier);
-            logService.insertLog("商家",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(supplier.getSupplier()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -194,6 +192,7 @@ public class SupplierService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商家", type = LogType.DELETE, contentTemplate = "{entityNames}")
     public int batchDeleteSupplierByIds(String ids)throws Exception {
         int result=0;
         String [] idArray=ids.split(",");
@@ -223,15 +222,6 @@ public class SupplierService {
             throw new BusinessRunTimeException(ExceptionConstants.DELETE_FORCE_CONFIRM_CODE,
                     ExceptionConstants.DELETE_FORCE_CONFIRM_MSG);
         }
-        //记录日志
-        StringBuffer sb = new StringBuffer();
-        sb.append(BusinessConstants.LOG_OPERATION_TYPE_DELETE);
-        List<Supplier> list = getSupplierListByIds(ids);
-        for(Supplier supplier: list){
-            sb.append("[").append(supplier.getSupplier()).append("]");
-        }
-        logService.insertLog("商家", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         User userInfo=userService.getCurrentUser();
         //校验通过执行删除操作
         try{
@@ -365,10 +355,8 @@ public class SupplierService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商家", type = LogType.ENABLED)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("商家",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> supplierIds = StringUtil.strToLongList(ids);
         Supplier supplier = new Supplier();
         supplier.setEnabled(status);
@@ -447,6 +435,7 @@ public class SupplierService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商家", type = LogType.IMPORT, contentTemplate = "供应商")
     public void importVendor(MultipartFile file, HttpServletRequest request) throws Exception{
         String type = "供应商";
         User userInfo = userService.getCurrentUser();
@@ -483,6 +472,7 @@ public class SupplierService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商家", type = LogType.IMPORT, contentTemplate = "客户")
     public void importCustomer(MultipartFile file, HttpServletRequest request) throws Exception{
         String type = "客户";
         User userInfo = userService.getCurrentUser();
@@ -519,6 +509,7 @@ public class SupplierService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商家", type = LogType.IMPORT, contentTemplate = "会员")
     public void importMember(MultipartFile file, HttpServletRequest request) throws Exception{
         String type = "会员";
         User userInfo = userService.getCurrentUser();
@@ -549,9 +540,6 @@ public class SupplierService {
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public BaseResponseInfo importExcel(List<Supplier> mList, String type, HttpServletRequest request) throws Exception {
-        logService.insertLog(type,
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_IMPORT).append(mList.size()).append(BusinessConstants.LOG_DATA_UNIT).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         BaseResponseInfo info = new BaseResponseInfo();
         Map<String, Object> data = new HashMap<>();
         try {

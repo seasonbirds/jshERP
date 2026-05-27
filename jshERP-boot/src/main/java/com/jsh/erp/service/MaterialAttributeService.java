@@ -2,6 +2,8 @@ package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.MaterialAttribute;
 import com.jsh.erp.datasource.entities.MaterialAttributeExample;
@@ -24,9 +26,6 @@ import java.util.List;
 @Service
 public class MaterialAttributeService {
     private Logger logger = LoggerFactory.getLogger(MaterialAttributeService.class);
-
-    @Resource
-    private LogService logService;
 
     @Resource
     private MaterialAttributeMapper materialAttributeMapper;
@@ -69,12 +68,11 @@ public class MaterialAttributeService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品属性", type = LogType.ADD, contentTemplate = "{obj.attributeName}")
     public int insertMaterialAttribute(JSONObject obj, HttpServletRequest request)throws Exception {
         MaterialAttribute m = JSONObject.parseObject(obj.toJSONString(), MaterialAttribute.class);
         try{
             materialAttributeMapper.insertSelective(m);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(m.getAttributeName()).toString(), request);
             return 1;
         }
         catch (BusinessRunTimeException ex) {
@@ -87,12 +85,11 @@ public class MaterialAttributeService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品属性", type = LogType.EDIT, contentTemplate = "{obj.attributeName}")
     public int updateMaterialAttribute(JSONObject obj, HttpServletRequest request) throws Exception{
         MaterialAttribute materialAttribute = JSONObject.parseObject(obj.toJSONString(), MaterialAttribute.class);
         try{
             materialAttributeMapper.updateByPrimaryKeySelective(materialAttribute);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(materialAttribute.getAttributeName()).toString(), request);
             return 1;
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -111,6 +108,7 @@ public class MaterialAttributeService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "商品属性", type = LogType.DELETE, contentTemplate = "{ids}")
     public int batchDeleteMaterialAttributeByIds(String ids) throws Exception{
         String [] idArray=ids.split(",");
         try{

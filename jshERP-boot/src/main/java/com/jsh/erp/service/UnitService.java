@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.aop.BusinessLog;
+import com.jsh.erp.aop.LogType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.Material;
@@ -18,8 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -39,8 +39,6 @@ public class UnitService {
     private UnitMapperEx unitMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
     @Resource
     private MaterialMapperEx materialMapperEx;
 
@@ -91,6 +89,7 @@ public class UnitService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "多单位", type = LogType.ADD, contentTemplate = "{obj.name}")
     public int insertUnit(JSONObject obj, HttpServletRequest request)throws Exception {
         Unit unit = JSONObject.parseObject(obj.toJSONString(), Unit.class);
         int result=0;
@@ -98,8 +97,6 @@ public class UnitService {
             parseNameByUnit(unit);
             unit.setEnabled(true);
             result=unitMapper.insertSelective(unit);
-            logService.insertLog("多单位",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(unit.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -107,6 +104,7 @@ public class UnitService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "多单位", type = LogType.EDIT, contentTemplate = "{obj.name}")
     public int updateUnit(JSONObject obj, HttpServletRequest request)throws Exception {
         Unit unit = JSONObject.parseObject(obj.toJSONString(), Unit.class);
         int result=0;
@@ -119,8 +117,6 @@ public class UnitService {
             if(unit.getRatioThree()==null) {
                 unitMapperEx.updateRatioThreeById(unit.getId());
             }
-            logService.insertLog("多单位",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(unit.getName()).toString(), request);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -153,6 +149,7 @@ public class UnitService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "多单位", type = LogType.DELETE, contentTemplate = "{entityNames}")
     public int batchDeleteUnitByIds(String ids)throws Exception {
         int result=0;
         String [] idArray=ids.split(",");
@@ -169,15 +166,6 @@ public class UnitService {
             throw new BusinessRunTimeException(ExceptionConstants.DELETE_FORCE_CONFIRM_CODE,
                     ExceptionConstants.DELETE_FORCE_CONFIRM_MSG);
         }
-        //记录日志
-        StringBuffer sb = new StringBuffer();
-        sb.append(BusinessConstants.LOG_OPERATION_TYPE_DELETE);
-        List<Unit> list = getUnitListByIds(ids);
-        for(Unit unit: list){
-            sb.append("[").append(unit.getName()).append("]");
-        }
-        logService.insertLog("多单位", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         User userInfo=userService.getCurrentUser();
         //校验通过执行删除操作
         try{
@@ -286,10 +274,8 @@ public class UnitService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @BusinessLog(moduleName = "多单位", type = LogType.ENABLED)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("多单位",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> unitIds = StringUtil.strToLongList(ids);
         Unit unit = new Unit();
         unit.setEnabled(status);
