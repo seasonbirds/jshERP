@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.AuditLog;
+import com.jsh.erp.aop.AuditLogContext;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -144,6 +146,7 @@ public class SupplierService {
         return list;
     }
 
+    @AuditLog(moduleName = "商家", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertSupplier(JSONObject obj, HttpServletRequest request)throws Exception {
         Supplier supplier = JSONObject.parseObject(obj.toJSONString(), Supplier.class);
@@ -155,14 +158,14 @@ public class SupplierService {
             result=supplierMapper.insertSelective(supplier);
             //新增客户时给当前用户和租户自动授权
             setUserCustomerPermission(request, supplier);
-            logService.insertLog("商家",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(supplier.getSupplier()).toString(),request);
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_ADD + supplier.getSupplier());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(moduleName = "商家", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateSupplier(JSONObject obj, HttpServletRequest request)throws Exception {
         Supplier supplier = JSONObject.parseObject(obj.toJSONString(), Supplier.class);
@@ -175,19 +178,20 @@ public class SupplierService {
         int result=0;
         try{
             result=supplierMapper.updateByPrimaryKeySelective(supplier);
-            logService.insertLog("商家",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(supplier.getSupplier()).toString(), request);
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + supplier.getSupplier());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(moduleName = "商家", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteSupplier(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteSupplierByIds(id.toString());
     }
 
+    @AuditLog(moduleName = "商家", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteSupplier(String ids, HttpServletRequest request) throws Exception{
         return batchDeleteSupplierByIds(ids);
@@ -230,8 +234,7 @@ public class SupplierService {
         for(Supplier supplier: list){
             sb.append("[").append(supplier.getSupplier()).append("]");
         }
-        logService.insertLog("商家", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        AuditLogContext.setContent(sb.toString());
         User userInfo=userService.getCurrentUser();
         //校验通过执行删除操作
         try{
@@ -364,11 +367,9 @@ public class SupplierService {
         return list;
     }
 
+    @AuditLog(moduleName = "商家", operationType = "更新状态")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("商家",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> supplierIds = StringUtil.strToLongList(ids);
         Supplier supplier = new Supplier();
         supplier.setEnabled(status);

@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.AuditLog;
+import com.jsh.erp.aop.AuditLogContext;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -12,8 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -36,8 +36,6 @@ public class SerialNumberService {
     private MaterialService materialService;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
 
     public SerialNumber getSerialNumber(long id)throws Exception {
         SerialNumber result=null;
@@ -174,6 +172,7 @@ public class SerialNumberService {
     /**
      * 批量添加序列号，最多500个
      */
+    @AuditLog(moduleName = "序列号", operationType = "")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batAddSerialNumber(String materialCode, String serialNumberPrefix, Integer batAddTotal, String remark)throws Exception {
         int result=0;
@@ -208,9 +207,7 @@ public class SerialNumberService {
                     list.add(each);
                 }
                 result = serialNumberMapperEx.batAddSerialNumber(list);
-                logService.insertLog("序列号",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_BATCH_ADD).append(batAddTotal).append(BusinessConstants.LOG_DATA_UNIT).toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_BATCH_ADD + batAddTotal + BusinessConstants.LOG_DATA_UNIT);
             }
         } catch (Exception e) {
             JshException.writeFail(logger, e);

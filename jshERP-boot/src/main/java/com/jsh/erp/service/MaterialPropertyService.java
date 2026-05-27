@@ -1,6 +1,8 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.AuditLog;
+import com.jsh.erp.aop.AuditLogContext;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.MaterialProperty;
 import com.jsh.erp.datasource.entities.MaterialPropertyExample;
@@ -13,8 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -31,8 +31,6 @@ public class MaterialPropertyService {
     private MaterialPropertyMapperEx materialPropertyMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
 
     public MaterialProperty getMaterialProperty(long id)throws Exception {
         MaterialProperty result=null;
@@ -107,39 +105,41 @@ public class MaterialPropertyService {
         list.add(mp3);
     }
 
+    @AuditLog(moduleName="商品属性", operationType="")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertMaterialProperty(JSONObject obj, HttpServletRequest request)throws Exception {
         MaterialProperty materialProperty = JSONObject.parseObject(obj.toJSONString(), MaterialProperty.class);
         int  result=0;
         try{
             result = materialPropertyMapper.insertSelective(materialProperty);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(materialProperty.getNativeName()).toString(), request);
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_ADD + materialProperty.getNativeName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(moduleName="商品属性", operationType="")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateMaterialProperty(JSONObject obj, HttpServletRequest request)throws Exception {
         MaterialProperty materialProperty = JSONObject.parseObject(obj.toJSONString(), MaterialProperty.class);
         int  result=0;
         try{
             result = materialPropertyMapper.updateByPrimaryKeySelective(materialProperty);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(materialProperty.getNativeName()).toString(), request);
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + materialProperty.getNativeName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @AuditLog(moduleName="商品属性", operationType="")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteMaterialProperty(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteMaterialPropertyByIds(id.toString());
     }
 
+    @AuditLog(moduleName="商品属性", operationType="")
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteMaterialProperty(String ids, HttpServletRequest request)throws Exception {
         return batchDeleteMaterialPropertyByIds(ids);
@@ -152,9 +152,7 @@ public class MaterialPropertyService {
         int  result=0;
         try{
             result = materialPropertyMapperEx.batchDeleteMaterialPropertyByIds(new Date(), userInfo == null ? null : userInfo.getId(), idArray);
-            logService.insertLog("商品属性",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_DELETE).append(ids).toString(),
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+            AuditLogContext.setContent(BusinessConstants.LOG_OPERATION_TYPE_DELETE + ids);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
