@@ -1,6 +1,9 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.Material;
@@ -18,8 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -39,8 +40,6 @@ public class UnitService {
     private UnitMapperEx unitMapperEx;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
     @Resource
     private MaterialMapperEx materialMapperEx;
 
@@ -90,6 +89,7 @@ public class UnitService {
         return list;
     }
 
+    @OperationLog(moduleName="多单位", operationType=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertUnit(JSONObject obj, HttpServletRequest request)throws Exception {
         Unit unit = JSONObject.parseObject(obj.toJSONString(), Unit.class);
@@ -98,14 +98,14 @@ public class UnitService {
             parseNameByUnit(unit);
             unit.setEnabled(true);
             result=unitMapper.insertSelective(unit);
-            logService.insertLog("多单位",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(unit.getName()).toString(), request);
+            LogContentProvider.setContent("新增" + unit.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="多单位", operationType=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateUnit(JSONObject obj, HttpServletRequest request)throws Exception {
         Unit unit = JSONObject.parseObject(obj.toJSONString(), Unit.class);
@@ -119,8 +119,7 @@ public class UnitService {
             if(unit.getRatioThree()==null) {
                 unitMapperEx.updateRatioThreeById(unit.getId());
             }
-            logService.insertLog("多单位",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(unit.getName()).toString(), request);
+            LogContentProvider.setContent("修改" + unit.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
@@ -142,11 +141,13 @@ public class UnitService {
         unit.setName(unitName);
     }
 
+    @OperationLog(moduleName="多单位", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteUnit(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteUnitByIds(id.toString());
     }
 
+    @OperationLog(moduleName="多单位", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteUnit(String ids, HttpServletRequest request) throws Exception{
         return batchDeleteUnitByIds(ids);
@@ -176,8 +177,7 @@ public class UnitService {
         for(Unit unit: list){
             sb.append("[").append(unit.getName()).append("]");
         }
-        logService.insertLog("多单位", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(sb.toString());
         User userInfo=userService.getCurrentUser();
         //校验通过执行删除操作
         try{
@@ -285,11 +285,9 @@ public class UnitService {
         return allPrice;
     }
 
+    @OperationLog(moduleName="多单位", operationType=OperationType.ENABLED)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("多单位",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> unitIds = StringUtil.strToLongList(ids);
         Unit unit = new Unit();
         unit.setEnabled(status);

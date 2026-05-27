@@ -61,8 +61,6 @@ public class DepotItemService {
     private MaterialCurrentStockMapper materialCurrentStockMapper;
     @Resource
     private MaterialCurrentStockMapperEx materialCurrentStockMapperEx;
-    @Resource
-    private LogService logService;
 
     public DepotItem getDepotItem(long id)throws Exception {
         DepotItem result=null;

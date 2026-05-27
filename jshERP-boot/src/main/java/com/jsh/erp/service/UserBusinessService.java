@@ -2,6 +2,9 @@ package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.datasource.entities.User;
 import com.jsh.erp.datasource.entities.UserBusiness;
@@ -13,8 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -31,8 +32,6 @@ public class UserBusinessService {
     private UserBusinessMapper userBusinessMapper;
     @Resource
     private UserBusinessMapperEx userBusinessMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
 
@@ -58,6 +57,7 @@ public class UserBusinessService {
         return list;
     }
 
+    @OperationLog(moduleName="关联关系", operationType=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertUserBusiness(JSONObject obj, HttpServletRequest request) throws Exception {
         UserBusiness userBusiness = JSONObject.parseObject(obj.toJSONString(), UserBusiness.class);
@@ -68,13 +68,14 @@ public class UserBusinessService {
             newValue = newValue.replaceAll("\\[0\\]","").replaceAll("\\[\\]","");
             userBusiness.setValue(newValue);
             result=userBusinessMapper.insertSelective(userBusiness);
-            logService.insertLog("关联关系", BusinessConstants.LOG_OPERATION_TYPE_ADD, request);
+            LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_ADD);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="关联关系", operationType=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateUserBusiness(JSONObject obj, HttpServletRequest request) throws Exception {
         UserBusiness userBusiness = JSONObject.parseObject(obj.toJSONString(), UserBusiness.class);
@@ -85,18 +86,20 @@ public class UserBusinessService {
             newValue = newValue.replaceAll("\\[0\\]","").replaceAll("\\[\\]","");
             userBusiness.setValue(newValue);
             result=userBusinessMapper.updateByPrimaryKeySelective(userBusiness);
-            logService.insertLog("关联关系", BusinessConstants.LOG_OPERATION_TYPE_EDIT, request);
+            LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT);
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="关联关系", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteUserBusiness(Long id, HttpServletRequest request)throws Exception {
         return batchDeleteUserBusinessByIds(id.toString());
     }
 
+    @OperationLog(moduleName="关联关系", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteUserBusiness(String ids, HttpServletRequest request)throws Exception {
         return batchDeleteUserBusinessByIds(ids);
@@ -104,9 +107,7 @@ public class UserBusinessService {
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteUserBusinessByIds(String ids) throws Exception{
-        logService.insertLog("关联关系",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_DELETE).append(ids).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent("删除" + ids);
         User userInfo=userService.getCurrentUser();
         String [] idArray=ids.split(",");
         int result=0;
@@ -158,11 +159,10 @@ public class UserBusinessService {
         return id;
     }
 
+    @OperationLog(moduleName="关联关系", operationType=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateBtnStr(String keyId, String type, String btnStr) throws Exception{
-        logService.insertLog("关联关系",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append("角色的按钮权限").toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent("修改角色的按钮权限");
         UserBusiness userBusiness = new UserBusiness();
         userBusiness.setBtnStr(btnStr);
         UserBusinessExample example = new UserBusinessExample();

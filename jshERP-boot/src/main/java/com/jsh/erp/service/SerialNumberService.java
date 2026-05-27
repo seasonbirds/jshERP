@@ -1,6 +1,9 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.*;
@@ -36,8 +39,6 @@ public class SerialNumberService {
     private MaterialService materialService;
     @Resource
     private UserService userService;
-    @Resource
-    private LogService logService;
 
     public SerialNumber getSerialNumber(long id)throws Exception {
         SerialNumber result=null;
@@ -175,6 +176,7 @@ public class SerialNumberService {
      * 批量添加序列号，最多500个
      */
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="序列号", operationType=OperationType.BATCH_ADD)
     public int batAddSerialNumber(String materialCode, String serialNumberPrefix, Integer batAddTotal, String remark)throws Exception {
         int result=0;
         try {
@@ -208,9 +210,7 @@ public class SerialNumberService {
                     list.add(each);
                 }
                 result = serialNumberMapperEx.batAddSerialNumber(list);
-                logService.insertLog("序列号",
-                        new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_BATCH_ADD).append(batAddTotal).append(BusinessConstants.LOG_DATA_UNIT).toString(),
-                        ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+                LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_BATCH_ADD + batAddTotal + BusinessConstants.LOG_DATA_UNIT);
             }
         } catch (Exception e) {
             JshException.writeFail(logger, e);

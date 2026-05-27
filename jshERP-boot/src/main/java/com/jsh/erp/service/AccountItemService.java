@@ -2,6 +2,9 @@ package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.constants.BusinessConstants;
 import com.jsh.erp.constants.ExceptionConstants;
 import com.jsh.erp.datasource.entities.AccountItem;
@@ -33,8 +36,6 @@ public class AccountItemService {
     private AccountItemMapper accountItemMapper;
     @Resource
     private AccountItemMapperEx accountItemMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
     @Resource
@@ -162,10 +163,9 @@ public class AccountItemService {
     }
 
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
+    @OperationLog(moduleName="财务明细", operationType=OperationType.DELETE)
     public int batchDeleteAccountItemByIds(String ids) throws Exception{
-        logService.insertLog("财务明细",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_DELETE).append(ids).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_DELETE + ids);
         User userInfo=userService.getCurrentUser();
         String [] idArray=ids.split(",");
         int result=0;

@@ -1,6 +1,9 @@
 package com.jsh.erp.service;
 
 import com.alibaba.fastjson.JSONObject;
+import com.jsh.erp.annotation.LogContentProvider;
+import com.jsh.erp.annotation.OperationLog;
+import com.jsh.erp.annotation.OperationType;
 import com.jsh.erp.base.PageDomain;
 import com.jsh.erp.base.TableSupport;
 import com.jsh.erp.constants.BusinessConstants;
@@ -18,8 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -51,8 +52,6 @@ public class AccountService {
     private AccountItemMapper accountItemMapper;
     @Resource
     private AccountItemMapperEx accountItemMapperEx;
-    @Resource
-    private LogService logService;
     @Resource
     private UserService userService;
     @Resource
@@ -156,6 +155,7 @@ public class AccountService {
         return list;
     }
 
+    @OperationLog(moduleName="账户", operationType=OperationType.ADD)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int insertAccount(JSONObject obj, HttpServletRequest request)throws Exception {
         Account account = JSONObject.parseObject(obj.toJSONString(), Account.class);
@@ -172,33 +172,34 @@ public class AccountService {
         int result=0;
         try{
             result = accountMapper.insertSelective(account);
-            logService.insertLog("账户",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ADD).append(account.getName()).toString(), request);
+            LogContentProvider.setContent("新增" + account.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="账户", operationType=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateAccount(JSONObject obj, HttpServletRequest request)throws Exception {
         Account account = JSONObject.parseObject(obj.toJSONString(), Account.class);
         int result=0;
         try{
             result = accountMapper.updateByPrimaryKeySelective(account);
-            logService.insertLog("账户",
-                    new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_EDIT).append(account.getName()).toString(), request);
+            LogContentProvider.setContent("修改" + account.getName());
         }catch(Exception e){
             JshException.writeFail(logger, e);
         }
         return result;
     }
 
+    @OperationLog(moduleName="账户", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int deleteAccount(Long id, HttpServletRequest request) throws Exception{
         return batchDeleteAccountByIds(id.toString());
     }
 
+    @OperationLog(moduleName="账户", operationType=OperationType.DELETE)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchDeleteAccount(String ids, HttpServletRequest request)throws Exception {
         return batchDeleteAccountByIds(ids);
@@ -254,8 +255,7 @@ public class AccountService {
         for(Account account: list){
             sb.append("[").append(account.getName()).append("]");
         }
-        logService.insertLog("账户", sb.toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+        LogContentProvider.setContent(sb.toString());
         User userInfo=userService.getCurrentUser();
         //校验通过执行删除操作
         try{
@@ -391,6 +391,7 @@ public class AccountService {
         return result;
     }
 
+    @OperationLog(moduleName="账户", operationType=OperationType.EDIT)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int updateIsDefault(Long accountId) throws Exception{
         int result=0;
@@ -407,8 +408,7 @@ public class AccountService {
             AccountExample example = new AccountExample();
             example.createCriteria().andIdEqualTo(accountId);
             accountMapper.updateByExampleSelective(account, example);
-            logService.insertLog("账户",BusinessConstants.LOG_OPERATION_TYPE_EDIT+accountId,
-                    ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
+            LogContentProvider.setContent(BusinessConstants.LOG_OPERATION_TYPE_EDIT + accountId);
             result = 1;
         }catch(Exception e){
             JshException.writeFail(logger, e);
@@ -562,11 +562,9 @@ public class AccountService {
         return priceFmt;
     }
 
+    @OperationLog(moduleName="账户", operationType=OperationType.ENABLED)
     @Transactional(value = "transactionManager", rollbackFor = Exception.class)
     public int batchSetStatus(Boolean status, String ids)throws Exception {
-        logService.insertLog("账户",
-                new StringBuffer(BusinessConstants.LOG_OPERATION_TYPE_ENABLED).toString(),
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         List<Long> accountIds = StringUtil.strToLongList(ids);
         Account account = new Account();
         account.setEnabled(status);

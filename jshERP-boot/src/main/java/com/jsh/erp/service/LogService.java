@@ -18,10 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Date;
 import java.util.List;
-
-import static com.jsh.erp.utils.Tools.getLocalIp;
 
 @Service
 public class LogService {
@@ -31,12 +28,6 @@ public class LogService {
 
     @Resource
     private LogMapperEx logMapperEx;
-
-    @Resource
-    private UserService userService;
-
-    @Resource
-    private RedisService redisService;
 
     public Log getLog(long id)throws Exception {
         Log result=null;
@@ -126,51 +117,5 @@ public class LogService {
             JshException.writeFail(logger, e);
         }
         return result;
-    }
-
-    public void insertLog(String moduleName, String content, HttpServletRequest request)throws Exception{
-        try{
-            Long userId = userService.getUserId(request);
-            if(userId!=null) {
-                String clientIp = getLocalIp(request);
-                String createTime = Tools.getNow3();
-                Long count = logMapperEx.getCountByIpAndDate(userId, moduleName, clientIp, createTime);
-                if(count > 0) {
-                    //如果某个用户某个IP在同1秒内连续操作两遍，此时需要删除该redis记录，使其退出，防止恶意攻击
-                    redisService.deleteObjectByUserAndIp(userId, clientIp);
-                } else {
-                    Log log = new Log();
-                    log.setUserId(userId);
-                    log.setOperation(moduleName);
-                    log.setClientIp(getLocalIp(request));
-                    log.setCreateTime(new Date());
-                    Byte status = 0;
-                    log.setStatus(status);
-                    log.setContent(content);
-                    logMapper.insertSelective(log);
-                }
-            }
-        }catch(Exception e){
-            JshException.writeFail(logger, e);
-        }
-    }
-
-    public void insertLogWithUserId(Long userId, Long tenantId, String moduleName, String content, HttpServletRequest request)throws Exception{
-        try{
-            if(userId!=null) {
-                Log log = new Log();
-                log.setUserId(userId);
-                log.setOperation(moduleName);
-                log.setClientIp(getLocalIp(request));
-                log.setCreateTime(new Date());
-                Byte status = 0;
-                log.setStatus(status);
-                log.setContent(content);
-                log.setTenantId(tenantId);
-                logMapperEx.insertLogWithUserId(log);
-            }
-        }catch(Exception e){
-            JshException.writeFail(logger, e);
-        }
     }
 }
